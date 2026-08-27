@@ -1,0 +1,16 @@
+<Window xmlns="https://github.com/avaloniaui" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" x:Class="RoboTransfer.App.Views.MainWindow" Title="RoboTransfer" Width="920" Height="720" MinWidth="720" MinHeight="600" Background="#F4F6F8">
+  <ScrollViewer><Grid Margin="40" RowDefinitions="Auto,24,Auto,24,Auto" MaxWidth="840">
+    <StackPanel><TextBlock Text="RoboTransfer" FontSize="32" FontWeight="SemiBold" Foreground="#15324B"/><TextBlock Text="Enterprise-safe PC migration" FontSize="16" Foreground="#536779" Margin="0,4,0,0"/></StackPanel>
+    <Border Grid.Row="2" Background="White" CornerRadius="8" Padding="24"><Grid RowDefinitions="Auto,16,Auto,20,Auto">
+      <TextBlock Text="Environment Analysis" FontSize="21" FontWeight="SemiBold"/>
+      <Grid Grid.Row="2" ColumnDefinitions="*,Auto" RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto">
+        <TextBlock Text="Windows"/><TextBlock Grid.Column="1" Text="{Binding WindowsState}" FontWeight="SemiBold"/><TextBlock Grid.Row="1" Text="Robocopy"/><TextBlock Grid.Row="1" Grid.Column="1" Text="{Binding RobocopyState}"/><TextBlock Grid.Row="2" Text="USMT"/><TextBlock Grid.Row="2" Grid.Column="1" Text="{Binding UsmtState}"/><TextBlock Grid.Row="3" Text="Approved network route"/><TextBlock Grid.Row="3" Grid.Column="1" Text="{Binding NetworkState}"/><TextBlock Grid.Row="4" Text="External storage"/><TextBlock Grid.Row="4" Grid.Column="1" Text="{Binding ExternalState}"/><TextBlock Grid.Row="5" Text="User profiles"/><TextBlock Grid.Row="5" Grid.Column="1" Text="{Binding Profiles.Count, StringFormat={}{0} detected}"/>
+      </Grid>
+      <Button Grid.Row="4" Content="Refresh analysis" Command="{Binding RefreshCommand}" HorizontalAlignment="Left" Padding="18,9"/>
+    </Grid></Border>
+    <Grid Grid.Row="4" ColumnDefinitions="*,20,*">
+      <Border Background="White" CornerRadius="8" Padding="24"><StackPanel Spacing="10"><TextBlock Text="Migration recommendation" FontSize="21" FontWeight="SemiBold"/><TextBlock Text="{Binding Recommendation}" FontSize="17" TextWrapping="Wrap"/><TextBlock Text="{Binding Detail}" Foreground="#536779" TextWrapping="Wrap"/></StackPanel></Border>
+      <Border Grid.Column="2" Background="White" CornerRadius="8" Padding="24"><StackPanel Spacing="10"><TextBlock Text="Device and source" FontSize="21" FontWeight="SemiBold"/><TextBlock Text="Local device role"/><ComboBox ItemsSource="{Binding Roles}" SelectedItem="{Binding Role}"/><TextBlock Text="OLD-PC source profile" Margin="0,8,0,0"/><ComboBox ItemsSource="{Binding Profiles}" SelectedItem="{Binding SelectedProfile}"><ComboBox.ItemTemplate><DataTemplate><TextBlock Text="{Binding DisplayName}"/></DataTemplate></ComboBox.ItemTemplate></ComboBox><TextBlock Text="Selection only — no files will be transferred." Foreground="#536779" TextWrapping="Wrap"/></StackPanel></Border>
+    </Grid>
+  </Grid></ScrollViewer>
+</Window>
