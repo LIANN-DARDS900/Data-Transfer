@@ -1,0 +1,60 @@
+namespace RoboTransfer.Core;
+
+public enum MigrationRole { OldPc, NewPc }
+public enum MigrationRoute { ConfiguredNetworkShare, ExternalStorage, NoAvailableRoute }
+public enum MigrationStrategy { RobocopyKnownFolders, Usmt, ManualApprovalRequired }
+public enum MigrationStatus { Draft, Analyzing, Ready, Blocked, Prepared, Transferring, Interrupted, Verifying, Completed, Failed, Abandoned }
+public enum CapabilityState { Available, NotAvailable, NotConfigured, ForbiddenByPolicy, RequiresApproval, Unknown }
+public enum KnownFolderKind { Desktop, Documents, Downloads, Pictures, Videos, Music, Favorites }
+public enum KnownFolderResolution { Resolved, ConventionalPath, Unresolved }
+public enum StorageKind { Fixed, Removable, Network, Optical, Ram, Unknown }
+public enum AttachmentType { Internal, External, Unknown }
+public enum StorageBusType { Usb, Nvme, Sata, Sas, Sd, Mmc, Virtual, FileBackedVirtual, Unknown }
+public enum TransferState { Pending, InProgress, Transferred, Skipped, Failed }
+public enum VerificationState { NotVerified, StandardVerified, StrongVerified, Failed, Unknown }
+public enum VerificationLevel { Standard, Strong }
+public enum CloudContentState { LocallyAvailable, Pinned, OnlineOnly, PartiallyAvailable, Unavailable, Unknown }
+public enum ConflictPolicy { Skip, ReplaceIfSourceNewer, KeepBoth, Replace, ManualDecision }
+public enum ErrorCategory { AccessDenied, FileLocked, InsufficientSpace, StorageDisconnected, ToolUnavailable, PolicyForbidden, CloudContentUnavailable, PathTooLong, DestinationConflict, VerificationFailed, ConfigurationInvalid, Cancelled, Unknown }
+public enum ProfileClassification { InteractiveUser, Special, Service, Temporary, Stale, Unknown }
+
+public sealed record MigrationSource(string MachineName, string? ProfileId);
+public sealed record MigrationDestination(MigrationRoute Route, string Location, long? AvailableBytes);
+public sealed record MigrationSession(Guid Id, MigrationRole Role, MigrationStatus Status, DateTimeOffset CreatedAt, DateTimeOffset UpdatedAt, MigrationSource? Source = null, MigrationDestination? Destination = null, string? ManifestReference = null, ErrorCategory? LastError = null);
+public sealed record KnownFolder(KnownFolderKind Kind, string? Path, bool Exists, KnownFolderResolution Resolution, string Explanation);
+public sealed record UserProfile(string Id, string DisplayName, string ProfilePath, bool IsLoaded, ProfileClassification Classification, bool IsSelectable, IReadOnlyList<KnownFolder> KnownFolders);
+public sealed record StorageVolume(string RootPath, string? Label, string? FileSystem, long TotalBytes, long AvailableBytes, StorageKind Kind, bool IsReady, AttachmentType Attachment, StorageBusType BusType, string? PhysicalDiskId = null, string? Model = null)
+{
+    public bool IsExternalCandidate => IsReady && Attachment == AttachmentType.External;
+}
+public sealed record ToolCapability(string Name, CapabilityState State, string? ExecutablePath = null, string? Version = null, string? Detail = null);
+public sealed record OperatingSystemInfo(string Description, string Architecture, string MachineName, string CurrentUser, bool? IsElevated);
+public sealed record NetworkShareCapability(string Path, CapabilityState State, string Explanation);
+public sealed record EnvironmentCapabilities(OperatingSystemInfo OperatingSystem, IReadOnlyList<StorageVolume> Volumes, IReadOnlyList<UserProfile> UserProfiles, ToolCapability Robocopy, ToolCapability Usmt, IReadOnlyList<NetworkShareCapability> ApprovedShares, IReadOnlyList<string> Warnings)
+{
+    public IReadOnlyList<StorageVolume> ExternalCandidates => Volumes.Where(volume => volume.IsExternalCandidate).ToArray();
+}
+
+public sealed record PolicyProfile(int SchemaVersion, bool AllowConfiguredNetworkShare, bool AllowExternalStorage, bool AllowUsmt, bool AllowRobocopy, VerificationLevel RequiredVerification, ConflictPolicy DefaultConflictPolicy, IReadOnlyList<string> ApprovedNetworkSharePaths)
+{
+    public const int CurrentSchemaVersion = 1;
+    public static PolicyProfile Conservative { get; } = new(CurrentSchemaVersion, false, false, false, false, VerificationLevel.Strong, ConflictPolicy.KeepBoth, Array.Empty<string>());
+}
+public sealed record PolicyValidationIssue(string Field, string Message);
+public sealed record PolicyLoadResult(bool IsValid, PolicyProfile Policy, IReadOnlyList<PolicyValidationIssue> Issues, string Source)
+{
+    public static PolicyLoadResult Invalid(string source, params PolicyValidationIssue[] issues) => new(false, PolicyProfile.Conservative, issues, source);
+}
+
+public sealed record PlanReason(string Subject, CapabilityState State, string Explanation);
+public sealed record MigrationPlan(MigrationRoute Route, MigrationStrategy Strategy, MigrationStatus Status, VerificationLevel Verification, ConflictPolicy ConflictPolicy, IReadOnlyList<PlanReason> Reasons, MigrationDestination? Destination)
+{
+    public string Recommendation => Route == MigrationRoute.NoAvailableRoute ? "No approved migration route is currently available" : $"{Route} + {Strategy}";
+}
+
+public sealed record MigrationManifestEntry(string RelativePath, long FileSize, DateTimeOffset LastWriteTime, FileAttributes Attributes, KnownFolderKind SourceKnownFolder, CloudContentState CloudState, TransferState TransferState, VerificationState VerificationState, ErrorCategory? Error, string? Warning);
+public sealed record MigrationManifestHeader(Guid SessionId, DateTimeOffset CreatedAt, long EntryCount, long TotalBytes, VerificationLevel Verification, ConflictPolicy ConflictPolicy);
+public sealed record TransferProgress(long FilesProcessed, long BytesProcessed, string Stage);
+public sealed record TransferRequest(Guid SessionId, MigrationPlan Plan, string SourceRoot, string DestinationRoot, ConflictPolicy ConflictPolicy);
+public sealed record TransferResult(bool Succeeded, bool Cancelled, long FilesTransferred, long BytesTransferred, IReadOnlyList<OperationError> Errors);
+public sealed record OperationError(ErrorCategory Category, string TechnicianMessage, string? SafeTechnicalDetail = null);

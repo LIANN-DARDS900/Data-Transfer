@@ -1,0 +1,10 @@
+{
+  "schemaVersion": 1,
+  "allowConfiguredNetworkShare": false,
+  "allowExternalStorage": false,
+  "allowUsmt": false,
+  "allowRobocopy": false,
+  "requiredVerification": "strong",
+  "defaultConflictPolicy": "keepBoth",
+  "approvedNetworkSharePaths": []
+}
