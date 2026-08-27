@@ -1,1 +1,20 @@
-<Application xmlns="https://github.com/avaloniaui" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" x:Class="RoboTransfer.App.App"><Application.Styles><FluentTheme /></Application.Styles></Application>
+<Application xmlns="https://github.com/avaloniaui" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" x:Class="RoboTransfer.App.App" RequestedThemeVariant="Light">
+  <Application.Resources>
+    <Color x:Key="CanvasColor">#F3F6F9</Color><Color x:Key="SurfaceColor">#FFFFFF</Color><Color x:Key="NavyColor">#13283B</Color><Color x:Key="TextColor">#172B3A</Color><Color x:Key="MutedColor">#5E7180</Color><Color x:Key="BorderColor">#DCE4EA</Color><Color x:Key="AccentColor">#176B87</Color><Color x:Key="SuccessColor">#147D64</Color><Color x:Key="WarningColor">#9A6700</Color><Color x:Key="DangerColor">#B42318</Color>
+    <SolidColorBrush x:Key="CanvasBrush" Color="{StaticResource CanvasColor}"/><SolidColorBrush x:Key="SurfaceBrush" Color="{StaticResource SurfaceColor}"/><SolidColorBrush x:Key="NavyBrush" Color="{StaticResource NavyColor}"/><SolidColorBrush x:Key="TextBrush" Color="{StaticResource TextColor}"/><SolidColorBrush x:Key="MutedBrush" Color="{StaticResource MutedColor}"/><SolidColorBrush x:Key="BorderBrush" Color="{StaticResource BorderColor}"/><SolidColorBrush x:Key="AccentBrush" Color="{StaticResource AccentColor}"/><SolidColorBrush x:Key="SuccessBrush" Color="{StaticResource SuccessColor}"/><SolidColorBrush x:Key="WarningBrush" Color="{StaticResource WarningColor}"/><SolidColorBrush x:Key="DangerBrush" Color="{StaticResource DangerColor}"/>
+    <x:Double x:Key="Space1">4</x:Double><x:Double x:Key="Space2">8</x:Double><x:Double x:Key="Space3">12</x:Double><x:Double x:Key="Space4">16</x:Double><x:Double x:Key="Space6">24</x:Double><x:Double x:Key="Space8">32</x:Double>
+  </Application.Resources>
+  <Application.Styles>
+    <FluentTheme/>
+    <Style Selector="Window"><Setter Property="FontFamily" Value="Segoe UI, Arial"/><Setter Property="FontSize" Value="14"/><Setter Property="Foreground" Value="{StaticResource TextBrush}"/><Setter Property="Background" Value="{StaticResource CanvasBrush}"/></Style>
+    <Style Selector="TextBlock.h1"><Setter Property="FontSize" Value="28"/><Setter Property="FontWeight" Value="SemiBold"/></Style>
+    <Style Selector="TextBlock.h2"><Setter Property="FontSize" Value="19"/><Setter Property="FontWeight" Value="SemiBold"/></Style>
+    <Style Selector="TextBlock.caption"><Setter Property="Foreground" Value="{StaticResource MutedBrush}"/><Setter Property="FontSize" Value="12"/></Style>
+    <Style Selector="Border.card"><Setter Property="Background" Value="{StaticResource SurfaceBrush}"/><Setter Property="BorderBrush" Value="{StaticResource BorderBrush}"/><Setter Property="BorderThickness" Value="1"/><Setter Property="CornerRadius" Value="8"/><Setter Property="Padding" Value="20"/></Style>
+    <Style Selector="Border.badge"><Setter Property="CornerRadius" Value="10"/><Setter Property="Padding" Value="9,3"/><Setter Property="Background" Value="#E9EEF2"/></Style>
+    <Style Selector="Border.badge.available"><Setter Property="Background" Value="#E6F4EF"/></Style><Style Selector="Border.badge.available TextBlock"><Setter Property="Foreground" Value="{StaticResource SuccessBrush}"/></Style>
+    <Style Selector="Border.badge.warning"><Setter Property="Background" Value="#FFF4D6"/></Style><Style Selector="Border.badge.warning TextBlock"><Setter Property="Foreground" Value="{StaticResource WarningBrush}"/></Style>
+    <Style Selector="Border.badge.blocked"><Setter Property="Background" Value="#FEECEB"/></Style><Style Selector="Border.badge.blocked TextBlock"><Setter Property="Foreground" Value="{StaticResource DangerBrush}"/></Style>
+    <Style Selector="Button.primary"><Setter Property="Background" Value="{StaticResource AccentBrush}"/><Setter Property="Foreground" Value="White"/><Setter Property="Padding" Value="18,10"/><Setter Property="CornerRadius" Value="5"/><Setter Property="FontWeight" Value="SemiBold"/></Style>
+  </Application.Styles>
+</Application>

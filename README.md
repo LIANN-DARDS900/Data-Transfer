@@ -1,57 +1,64 @@
 # RoboTransfer
 
-**Enterprise-safe PC migration orchestration for moving an employee from an OLD Windows PC to a NEW Windows PC.** RoboTransfer analyzes the local environment, separates technical availability from organizational authorization, and recommends an approved transport and migration strategy. It is not a general-purpose Robocopy GUI.
+RoboTransfer is a policy-aware Windows laptop migration orchestrator for technicians moving an employee from an **OLD corporate PC** to a **NEW corporate PC**. It analyzes the endpoint, distinguishes technical capability from enterprise authorization, and produces a deterministic, explainable migration plan. It is not a generic Robocopy GUI.
 
 > **RoboTransfer does not bypass enterprise network or endpoint security controls. It operates only through migration mechanisms explicitly allowed by policy/configuration.**
 
-## Phase 1
+**Lifecycle status: Development.** Phase 1 is a non-destructive analysis and architecture foundation. It is not approved for production migrations and contains no active transfer implementation.
 
-Phase 1 provides a non-destructive foundation:
+## Security and privacy posture
 
-- read-only OS, elevation, storage-volume, removable-volume, and selectable local-profile analysis;
-- detection of the system Robocopy executable and its file version without running it;
-- detection of an existing Windows ADK USMT installation (both ScanState and LoadState), without downloading or running it;
-- accessibility checks only for explicitly approved UNC paths—there is no discovery, subnet scan, or port scan;
-- a conservative, strongly typed `PolicyProfile` that denies every migration mechanism by default;
-- deterministic planning that keeps the transport route separate from the migration tool;
-- local JSON session-journal storage behind the platform-neutral `IMigrationJournal` contract;
-- manifest records with transfer, verification, known-folder, and cloud-placeholder state. Placeholder detection remains intentionally unimplemented and defaults to `Unknown`;
-- an Avalonia MVVM dashboard for analysis, recommendations, device role, and OLD-PC profile selection.
+- Missing, malformed, or unsupported policy fails closed to a conservative profile.
+- Network checks are restricted to explicit, validated UNC paths; there is no LAN discovery, subnet scan, port scan, or listener.
+- The application does not change firewall, Defender, Group Policy, PowerShell, SMB, services, drivers, or endpoint-protection settings.
+- Robocopy and USMT are detected but never executed in Phase 1. USMT binaries are not redistributed.
+- Fixed disks are not assumed to be internal or external: physical-disk evidence is used, and uncertainty remains `Unknown`.
+- Registered Windows profiles and shell-folder mappings replace blind `C:\Users` enumeration and path guessing.
+- Transfer state and verification state are independent. Strong verification means future SHA-256 comparison of source and destination; Phase 1 does not claim it occurred.
+- There is **zero network telemetry**, no analytics, no crash upload, and no cloud service dependency.
 
-No copying, deletion, remote pairing, custom networking, listener, firewall change, service installation, policy modification, USMT execution, or Robocopy execution exists in Phase 1.
+See the focused [threat model](docs/security/Threat-Model.md) and [Windows validation plan](docs/validation/Windows-Validation-Plan.md).
 
-## Planning rules
+## Phase 1 capabilities
 
-Rules are deterministic and apply in this order:
+- Read-only OS, architecture, machine, user-context, elevation, registered-profile, known-folder, logical-volume, and associated physical-disk analysis.
+- USB/fixed/removable attachment classification using `Win32_LogicalDiskToPartition` and `Win32_DiskDriveToDiskPartition` evidence, with explicit uncertainty.
+- System Robocopy version/path detection and installed Windows ADK ScanState/LoadState pair detection.
+- Windows cloud-placeholder state abstraction and file-attribute classification for local, pinned, online-only, partial, unavailable, and unknown states.
+- Versioned local JSON policy with strict parsing, semantic validation, safe UNC allow-listing, explicit tool/route permissions, verification level, and preservation-first conflict policy.
+- Deterministic planner ordered by policy → capability → capacity → strategy, with technician-readable reasons.
+- Atomic, schema-versioned JSON session journals and incomplete-session discovery behind `IMigrationJournal`.
+- Streaming-oriented manifest and transfer contracts designed for large migrations without implementing file transfer.
+- Avalonia MVVM technician shell with guided workflow, centralized design tokens, endpoint status, policy/error/loading/empty states, profile resolution confidence, and a clearly disabled future preparation action.
 
-1. Policy gates every route and tool. Technical presence never overrides a denial.
-2. A configured network route is eligible only when network shares are permitted, its UNC path is explicitly listed, and that exact path is accessible.
-3. External storage is eligible only when permitted, detected as removable, ready, and large enough for a supplied estimate.
-4. An eligible configured share is selected before removable storage; neither causes security configuration changes.
-5. USMT is preferred when detected and permitted; otherwise Robocopy Known Folders is used when detected and permitted.
-6. With no eligible route or tool, the result is blocked and requires manual approval.
+## Planner rules
 
-Every plan carries structured reasons for selections and rejections.
+1. Policy authorization is evaluated first and cannot be overridden by detected hardware or tools.
+2. A network route is eligible only when enabled, explicitly allow-listed as an absolute UNC path, and accessible using the current identity.
+3. External media is eligible only when policy permits it, Windows evidence classifies attachment as external, the volume is ready, and confirmed capacity meets the estimate.
+4. An approved reachable share is preferred over eligible external media; this is deterministic, not a performance guess.
+5. USMT is preferred when installed and allowed; otherwise Robocopy Known Folders is selected when installed and allowed. Route and strategy remain independent.
+6. Unknown/online-only cloud state can block preparation for technician review.
+7. No eligible route or strategy produces a blocked plan requiring manual action.
 
-## Architecture
+## Solution structure
 
 | Project | Responsibility |
 |---|---|
-| `RoboTransfer.Core` | Platform-neutral immutable domain models, interfaces, policy, and planner |
-| `RoboTransfer.Windows` | Read-only OS, profile, volume, elevation, and approved-share detection |
-| `RoboTransfer.Robocopy` | Robocopy presence/version detection only |
-| `RoboTransfer.Usmt` | Installed Windows ADK USMT detection only |
-| `RoboTransfer.Persistence` | Atomic local JSON session journal |
-| `RoboTransfer.App` | Avalonia 12 MVVM UI and dependency-composition root |
-| `RoboTransfer.Core.Tests` | Planner decision matrix and conservative-policy tests |
-| `RoboTransfer.Windows.Tests` | Approved-path policy-boundary tests |
+| `RoboTransfer.Core` | Platform-neutral domain, policy, error taxonomy, planning and execution/recovery contracts |
+| `RoboTransfer.Windows` | Read-only storage, registered-profile, known-folder, cloud, elevation and approved-share detection |
+| `RoboTransfer.Robocopy` | System Robocopy capability adapter only |
+| `RoboTransfer.Usmt` | Existing Windows ADK USMT capability adapter only |
+| `RoboTransfer.Persistence` | Strict policy loading and atomic local JSON session journal |
+| `RoboTransfer.App` | Avalonia 12 MVVM technician experience and dependency composition |
+| `RoboTransfer.Core.Tests` | Policy, planner, capacity and journal behavior |
+| `RoboTransfer.Windows.Tests` | Storage classification, profile/folder classification, share boundary and cancellation behavior |
 
-Core has no Windows dependency. Windows behavior is behind Core interfaces, and the application runs as the current user (`asInvoker`) rather than demanding elevation.
+Important decisions are recorded in [`docs/architecture`](docs/architecture), with the concrete production path in the [engineering roadmap](docs/architecture/Roadmap.md).
 
-## Requirements and build
+## Build and run
 
-- .NET 10 SDK
-- Windows 11 x64 for real capability/runtime validation
+Requirements: .NET 10 SDK. Runtime validation requires managed Windows 11 x64 hardware.
 
 ```powershell
 dotnet restore RoboTransfer.sln
@@ -60,12 +67,18 @@ dotnet test RoboTransfer.sln -c Release --no-build
 dotnet run --project src/RoboTransfer.App/RoboTransfer.App.csproj
 ```
 
-The solution can be restored and compiled on other .NET-supported hosts. OS-specific detectors report normal unavailable/unknown states outside Windows; final device, elevation, ADK, UNC authorization, and removable-media behavior must be verified on a policy-managed Windows 11 endpoint.
+For publishing readiness, the project carries explicit product/version metadata and remains `asInvoker`. A future validated packaging pipeline may use:
 
-## Configuration direction
+```powershell
+dotnet publish src/RoboTransfer.App/RoboTransfer.App.csproj -c Release -r win-x64 --self-contained true
+```
 
-`PolicyProfile.Conservative` is the current application default. Approved UNC paths and permissions must eventually be supplied by technician-managed configuration and never inferred. Phase 2 should introduce validated policy-file loading and schema/version handling before enabling any transfer engine.
+This command is direction only, not a claim that an MSI, signed binary, single-file distribution, or corporate deployment validation currently exists.
 
-## Intentionally deferred
+## Local policy
 
-Phase 1 does not transfer data. Phase 2 should add manifest estimation and reliable Windows cloud-placeholder classification first, with cancellation, reparse-point safety, inaccessible-item warnings, capacity reservation, signed-plan confirmation, and strong post-copy verification. Execution should remain opt-in and restricted to an approved route and tool; remote discovery and a custom transfer protocol should remain out of scope.
+Copy [`config/policy.example.json`](config/policy.example.json) to `%LOCALAPPDATA%\RoboTransfer\policy.json`, then have the enterprise policy owner explicitly enable only approved mechanisms. The shipped example and application default deny all routes and tools. Unsupported versions, invalid JSON, unsafe conflict defaults, and invalid UNC entries remain conservative and are surfaced in the UI; they never fall back permissively.
+
+## Intentionally not implemented
+
+There is no file scan, copy, deletion, Robocopy/USMT execution, hydration, remote pairing, transfer listener, verification hash, report generation, or installer in Phase 1. The disabled UI action does not imply readiness. Phase 2 scope is defined precisely in the [roadmap](docs/architecture/Roadmap.md); it must retain copy-only defaults, reject destructive mirroring, and require immutable manifest review plus explicit technician confirmation.

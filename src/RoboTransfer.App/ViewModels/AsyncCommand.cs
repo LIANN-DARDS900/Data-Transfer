@@ -1,7 +1,12 @@
 using System.Windows.Input;
 namespace RoboTransfer.App.ViewModels;
-public sealed class AsyncCommand(Func<Task> action) : ICommand
+public sealed class AsyncCommand(Func<CancellationToken, Task> action, Action<Exception>? onError = null) : ICommand
 {
-    private bool busy; public bool CanExecute(object? parameter) => !busy; public event EventHandler? CanExecuteChanged;
-    public async void Execute(object? parameter) { if (busy) return; busy = true; CanExecuteChanged?.Invoke(this, EventArgs.Empty); try { await action(); } finally { busy = false; CanExecuteChanged?.Invoke(this, EventArgs.Empty); } }
+    private bool executing; public bool CanExecute(object? parameter) => !executing; public event EventHandler? CanExecuteChanged;
+    public async void Execute(object? parameter)
+    {
+        if (executing) return; executing = true; CanExecuteChanged?.Invoke(this, EventArgs.Empty);
+        try { await action(CancellationToken.None).ConfigureAwait(true); } catch (Exception ex) { onError?.Invoke(ex); }
+        finally { executing = false; CanExecuteChanged?.Invoke(this, EventArgs.Empty); }
+    }
 }
