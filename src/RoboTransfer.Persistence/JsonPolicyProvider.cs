@@ -9,18 +9,18 @@ public sealed class JsonPolicyProvider(string path) : IPolicyProvider
     private static JsonSerializerOptions CreateOptions() { var options = new JsonSerializerOptions(JsonSerializerDefaults.Web) { AllowTrailingCommas = false, ReadCommentHandling = JsonCommentHandling.Disallow, PropertyNameCaseInsensitive = false }; options.Converters.Add(new JsonStringEnumConverter(JsonNamingPolicy.CamelCase, allowIntegerValues: false)); return options; }
     public async Task<PolicyLoadResult> LoadAsync(CancellationToken cancellationToken = default)
     {
-        if (!File.Exists(path)) return PolicyLoadResult.Invalid(path, new("policy", "The policy file does not exist. Conservative policy remains active."));
+        if (!File.Exists(path)) return PolicyLoadResult.Invalid(path, new PolicyValidationIssue("policy", "The policy file does not exist. Conservative policy remains active."));
         try
         {
             await using var stream = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.Read, 4096, FileOptions.Asynchronous | FileOptions.SequentialScan);
             var policy = await JsonSerializer.DeserializeAsync<PolicyProfile>(stream, Options, cancellationToken).ConfigureAwait(false);
-            if (policy is null) return PolicyLoadResult.Invalid(path, new("policy", "The policy document is empty."));
+            if (policy is null) return PolicyLoadResult.Invalid(path, new PolicyValidationIssue("policy", "The policy document is empty."));
             var issues = Validate(policy);
             return issues.Count == 0 ? new(true, policy, issues, path) : new(false, PolicyProfile.Conservative, issues, path);
         }
-        catch (JsonException ex) { return PolicyLoadResult.Invalid(path, new("policy", $"Malformed JSON at line {ex.LineNumber}, byte {ex.BytePositionInLine}.")); }
-        catch (UnauthorizedAccessException) { return PolicyLoadResult.Invalid(path, new("policy", "The policy file cannot be read with the current identity.")); }
-        catch (IOException ex) { return PolicyLoadResult.Invalid(path, new("policy", $"The policy file could not be read ({ex.GetType().Name}).")); }
+        catch (JsonException ex) { return PolicyLoadResult.Invalid(path, new PolicyValidationIssue("policy", $"Malformed JSON at line {ex.LineNumber}, byte {ex.BytePositionInLine}.")); }
+        catch (UnauthorizedAccessException) { return PolicyLoadResult.Invalid(path, new PolicyValidationIssue("policy", "The policy file cannot be read with the current identity.")); }
+        catch (IOException ex) { return PolicyLoadResult.Invalid(path, new PolicyValidationIssue("policy", $"The policy file could not be read ({ex.GetType().Name}).")); }
     }
 
     public static IReadOnlyList<PolicyValidationIssue> Validate(PolicyProfile policy)
