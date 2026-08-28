@@ -1,0 +1,14 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/RoboTransfer.App/RoboTransfer.App.csproj" />
+    <Project Path="src/RoboTransfer.Core/RoboTransfer.Core.csproj" />
+    <Project Path="src/RoboTransfer.Persistence/RoboTransfer.Persistence.csproj" />
+    <Project Path="src/RoboTransfer.Robocopy/RoboTransfer.Robocopy.csproj" />
+    <Project Path="src/RoboTransfer.Usmt/RoboTransfer.Usmt.csproj" />
+    <Project Path="src/RoboTransfer.Windows/RoboTransfer.Windows.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/RoboTransfer.Core.Tests/RoboTransfer.Core.Tests.csproj" />
+    <Project Path="tests/RoboTransfer.Windows.Tests/RoboTransfer.Windows.Tests.csproj" />
+  </Folder>
+</Solution>

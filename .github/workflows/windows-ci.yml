@@ -1,0 +1,39 @@
+name: Windows CI
+
+on:
+  pull_request:
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    name: Restore, build, test, and audit
+    runs-on: windows-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v5
+
+      - name: Install .NET 10 SDK
+        uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: 10.0.x
+
+      - name: Restore (NuGet audit enabled)
+        run: dotnet restore RoboTransfer.sln
+
+      - name: Build Release
+        run: dotnet build RoboTransfer.sln -c Release --no-restore
+
+      - name: Test Release
+        run: dotnet test RoboTransfer.sln -c Release --no-build
+
+      - name: Record resolved application dependency graph
+        run: dotnet list src/RoboTransfer.App/RoboTransfer.App.csproj package --include-transitive
+
+      - name: Report vulnerable application dependencies
+        run: dotnet list src/RoboTransfer.App/RoboTransfer.App.csproj package --vulnerable --include-transitive
