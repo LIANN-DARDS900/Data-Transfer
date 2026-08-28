@@ -2,7 +2,6 @@ name: Windows CI
 
 on:
   pull_request:
-  push:
     branches:
       - main
 
@@ -35,3 +34,6 @@ jobs:
 
       - name: Record resolved application dependency graph
         run: dotnet list src/RoboTransfer.App/RoboTransfer.App.csproj package --include-transitive
+
+      - name: Report vulnerable application dependencies
+        run: dotnet list src/RoboTransfer.App/RoboTransfer.App.csproj package --vulnerable --include-transitive
