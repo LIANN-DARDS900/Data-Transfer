@@ -1,6 +1,10 @@
 # RoboTransfer threat model
 
-**Scope:** Phase 1 local endpoint analysis, policy evaluation, planning, and session persistence. Transfer execution is not implemented.
+**Scope:** Phase 3 local analysis, transfer, independent verification, durable reporting, diagnostics, and recovery.
+
+Phase 3 verification canonicalizes every manifest-derived path, rejects rooted/traversal paths and reparse-point files, validates the immutable execution-plan fingerprint, and requires a completed integrity-checked manifest. Verification records carry an integrity digest. Report and diagnostic exports redact profile identities and full paths; neither export contains credentials or file contents.
+
+SHA-256 establishes current source/destination content equality only. It does not establish trust, publisher identity, malware safety, or provenance. Microsoft executable publisher validation remains a real-device qualification item; RoboTransfer continues to require the detected system Robocopy path and version and fails closed when they change.
 
 ## Assets and trust boundaries
 

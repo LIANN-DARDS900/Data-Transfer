@@ -28,6 +28,7 @@
     <ProjectReference Include="../RoboTransfer.Robocopy/RoboTransfer.Robocopy.csproj" />
     <ProjectReference Include="../RoboTransfer.Usmt/RoboTransfer.Usmt.csproj" />
     <ProjectReference Include="../RoboTransfer.Persistence/RoboTransfer.Persistence.csproj" />
+    <ProjectReference Include="../RoboTransfer.Verification/RoboTransfer.Verification.csproj" />
   </ItemGroup>
 
   <ItemGroup>

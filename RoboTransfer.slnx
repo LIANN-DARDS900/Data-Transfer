@@ -5,6 +5,7 @@
     <Project Path="src/RoboTransfer.Persistence/RoboTransfer.Persistence.csproj" />
     <Project Path="src/RoboTransfer.Robocopy/RoboTransfer.Robocopy.csproj" />
     <Project Path="src/RoboTransfer.Usmt/RoboTransfer.Usmt.csproj" />
+    <Project Path="src/RoboTransfer.Verification/RoboTransfer.Verification.csproj" />
     <Project Path="src/RoboTransfer.Windows/RoboTransfer.Windows.csproj" />
   </Folder>
   <Folder Name="/tests/">

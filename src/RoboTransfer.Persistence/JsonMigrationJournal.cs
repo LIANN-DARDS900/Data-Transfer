@@ -46,7 +46,9 @@ public sealed class JsonMigrationJournal(string directory, ILogger<JsonMigration
         {
             cancellationToken.ThrowIfCancellationRequested();
             if (!Guid.TryParseExact(Path.GetFileNameWithoutExtension(path), "N", out var id)) continue;
-            var session = await LoadAsync(id, cancellationToken).ConfigureAwait(false);
+            MigrationSession? session;
+            try { session = await LoadAsync(id, cancellationToken).ConfigureAwait(false); }
+            catch (InvalidDataException) { logger.LogWarning("Corrupt session journal was excluded from recovery discovery. SessionId={SessionId}", id); continue; }
             if (session is not null && session.Status is not (MigrationStatus.Completed or MigrationStatus.Abandoned)) yield return session;
         }
     }

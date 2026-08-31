@@ -15,7 +15,7 @@ public enum VerificationState { NotVerified, StandardVerified, StrongVerified, F
 public enum VerificationLevel { Standard, Strong }
 public enum CloudContentState { LocallyAvailable, Pinned, OnlineOnly, PartiallyAvailable, Unavailable, Unknown }
 public enum ConflictPolicy { Skip, ReplaceIfSourceNewer, KeepBoth, Replace, ManualDecision }
-public enum ErrorCategory { AccessDenied, FileLocked, InsufficientSpace, StorageDisconnected, ToolUnavailable, PolicyForbidden, CloudContentUnavailable, PathTooLong, DestinationConflict, VerificationFailed, ConfigurationInvalid, Cancelled, Unknown }
+public enum ErrorCategory { AccessDenied, FileLocked, InvalidPath, InsufficientSpace, StorageDisconnected, DestinationChanged, ToolUnavailable, PolicyForbidden, CloudContentUnavailable, PathTooLong, DestinationConflict, VerificationMismatch, VerificationFailed, ProcessFailure, ConfigurationInvalid, Cancelled, Unknown }
 public enum ProfileClassification { InteractiveUser, Special, Service, Temporary, Stale, Unknown }
 
 public sealed record MigrationSource(string MachineName, string? ProfileId);
@@ -53,8 +53,34 @@ public sealed record MigrationPlan(MigrationRoute Route, MigrationStrategy Strat
 }
 
 public sealed record MigrationManifestEntry(string RelativePath, long FileSize, DateTimeOffset LastWriteTime, FileAttributes Attributes, KnownFolderKind SourceKnownFolder, CloudContentState CloudState, TransferState TransferState, VerificationState VerificationState, ErrorCategory? Error, string? Warning);
-public sealed record MigrationManifestHeader(Guid SessionId, DateTimeOffset CreatedAt, long EntryCount, long TotalBytes, VerificationLevel Verification, ConflictPolicy ConflictPolicy);
-public sealed record TransferProgress(long FilesProcessed, long BytesProcessed, string Stage);
+public enum ManifestCompletionState { Complete, Interrupted }
+public enum ManifestReadState { Complete, Incomplete, Corrupt }
+public sealed record MigrationManifestHeader(Guid SessionId, DateTimeOffset CreatedAt, long EntryCount, long TotalBytes, VerificationLevel Verification, ConflictPolicy ConflictPolicy, int FormatVersion = 2);
+public sealed record MigrationManifestFooter(Guid SessionId, DateTimeOffset CompletedAt, long EntryCount, long TotalBytes, long EligibleEntryCount, long EligibleBytes, long SkippedCount, long WarningCount, ManifestCompletionState CompletionState);
+public sealed record ManifestReadResult(ManifestReadState State, MigrationManifestHeader? Header, MigrationManifestFooter? Footer, OperationError? Error);
+public sealed record ManifestScanRequest(Guid SessionId, string ProfileId, IReadOnlyList<KnownFolder> KnownFolders, VerificationLevel Verification, ConflictPolicy ConflictPolicy, string ManifestReference);
+public sealed record ManifestScanProgress(KnownFolderKind? CurrentFolder, long FilesScanned, long BytesScanned, long Skipped, long Warnings);
+public sealed record ManifestScanResult(MigrationManifestHeader Header, string ManifestReference, long Skipped, long Warnings, bool Cancelled);
+public sealed record MigrationExecutionPlan(Guid SessionId, DateTimeOffset CreatedAt, string SourceMachineIdentity, string SourceProfileIdentity, IReadOnlyList<KnownFolderKind> SelectedKnownFolders, string ManifestIdentity, string ManifestPath, long ManifestEntryCount, long ExpectedBytes, MigrationRoute Route, MigrationStrategy Strategy, string DestinationIdentity, string DestinationPath, long DestinationAvailableBytes, ConflictPolicy ConflictPolicy, string CloudDisposition, VerificationLevel VerificationRequirement, int PolicySchemaVersion, string PolicyFingerprint, string RobocopyExecutablePath, string? RobocopyVersion, string? ApplicationVersion, bool ReplaceAuthorizedByPolicy = false, bool DestructiveReplaceConfirmed = false)
+{
+    [System.Text.Json.Serialization.JsonIgnore]
+    public string Fingerprint => ExecutionPlanFingerprint.Create(this);
+}
+public sealed record DestinationValidationContext(MigrationExecutionPlan Plan, IReadOnlyList<string> SourceRoots, PolicyProfile Policy, StorageVolume? CurrentVolume, bool RequireExistingDestination = false, ToolCapability? CurrentRobocopy = null);
+public sealed record DestinationValidationResult(bool IsValid, IReadOnlyList<OperationError> Errors);
+public sealed record TransferProgress(long FilesProcessed, long BytesProcessed, string Stage, KnownFolderKind? CurrentFolder = null, long? TotalFiles = null, long? TotalBytes = null, double? BytesPerSecond = null, TimeSpan? Elapsed = null, TimeSpan? EstimatedRemaining = null, long Skipped = 0, long Warnings = 0, long Failed = 0);
 public sealed record TransferRequest(Guid SessionId, MigrationPlan Plan, string SourceRoot, string DestinationRoot, ConflictPolicy ConflictPolicy);
+public sealed record MigrationExecutionRequest(MigrationExecutionPlan Plan, string SourceRoot, string DestinationRoot, KnownFolderKind SourceKnownFolder);
 public sealed record TransferResult(bool Succeeded, bool Cancelled, long FilesTransferred, long BytesTransferred, IReadOnlyList<OperationError> Errors);
+public enum TransferCompletionState { Failed, Interrupted, TransferCompletedVerificationPending }
+public sealed record TransferReconciliationResult(TransferCompletionState State, long EligibleFiles, long EligibleBytes, long DestinationFiles, long DestinationBytes, long SkippedCloudFiles, IReadOnlyList<OperationError> Errors);
+public enum VerificationEntryStatus { Verified, Skipped, Missing, SizeMismatch, MetadataMismatch, ContentMismatch, AccessDenied, ChangedSinceTransfer, Unknown }
+public enum VerificationRunState { Completed, CompletedWithWarnings, Failed, Cancelled }
+public enum FinalMigrationStatus { Success, SuccessWithWarnings, Incomplete, VerificationFailed, Failed, Cancelled }
+public sealed record VerificationRequest(MigrationExecutionPlan Plan, string ExpectedExecutionPlanFingerprint, string CurrentPolicyFingerprint, IReadOnlyDictionary<KnownFolderKind, string> SourceRoots, string DestinationRoot, VerificationLevel Mode, IReadOnlySet<string>? RetryRelativePaths = null);
+public sealed record VerificationProgress(VerificationLevel Mode, long FilesProcessed, long TotalFiles, long BytesProcessed, long TotalBytes, KnownFolderKind? CurrentFolder, string? SafeCurrentFile, TimeSpan Elapsed, double? BytesPerSecond, long Failures, long Mismatches, long Skipped);
+public sealed record VerificationEntryResult(KnownFolderKind KnownFolder, string RelativePath, string DestinationRelativePath, long ExpectedBytes, VerificationEntryStatus Status, ErrorCategory? Error, string TechnicianMessage, string? SourceSha256 = null, string? DestinationSha256 = null);
+public sealed record VerificationResult(Guid Id, Guid SessionId, DateTimeOffset StartedAt, DateTimeOffset CompletedAt, VerificationLevel Mode, VerificationRunState State, long EligibleFiles, long EligibleBytes, long VerifiedFiles, long VerifiedBytes, long SkippedFiles, long Mismatches, IReadOnlyList<VerificationEntryResult> Entries, string ExecutionPlanFingerprint, string ManifestIdentity, int SchemaVersion = 1);
+public sealed record MigrationReport(Guid SessionId, string ApplicationVersion, DateTimeOffset CreatedAt, string SourceMachine, string SourceProfile, string Destination, MigrationRoute Route, MigrationStrategy Strategy, IReadOnlyList<KnownFolderKind> SelectedFolders, long ExpectedFiles, long ExpectedBytes, long TransferredFiles, long TransferredBytes, long SkippedCloudContent, long LockedFiles, long Conflicts, long Failures, VerificationRunState StandardVerification, VerificationRunState? StrongVerification, TimeSpan ScanElapsed, TimeSpan TransferElapsed, TimeSpan VerificationElapsed, IReadOnlyList<string> Warnings, FinalMigrationStatus FinalStatus, string PolicyFingerprint, string ExecutionPlanFingerprint, string ManifestIdentity, Guid VerificationResultIdentity, int SchemaVersion = 1);
+public sealed record MigrationOperationalRecord(Guid SessionId, TimeSpan ScanElapsed, TimeSpan TransferElapsed, long TransferredFiles, long TransferredBytes, long LockedFiles, long Conflicts, long TransferFailures, IReadOnlyList<OperationError> TransferErrors, TimeSpan VerificationElapsed, Guid? VerificationResultIdentity, int SchemaVersion = 1);
 public sealed record OperationError(ErrorCategory Category, string TechnicianMessage, string? SafeTechnicalDetail = null);

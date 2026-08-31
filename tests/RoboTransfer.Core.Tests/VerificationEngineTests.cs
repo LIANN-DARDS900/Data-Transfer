@@ -1,0 +1,51 @@
+using RoboTransfer.Core;
+using RoboTransfer.Verification;
+
+namespace RoboTransfer.Core.Tests;
+
+public sealed class VerificationEngineTests
+{
+    [Theory]
+    [InlineData(VerificationLevel.Standard)]
+    [InlineData(VerificationLevel.Strong)]
+    public async Task Exact_match_verifies(VerificationLevel mode) { using var fixture = await Fixture.CreateAsync("content"); var result = await fixture.VerifyAsync(mode); Assert.Equal(VerificationRunState.Completed, result.State); Assert.Equal(VerificationEntryStatus.Verified, Assert.Single(result.Entries).Status); }
+    [Fact]
+    public async Task Missing_destination_is_reported() { using var fixture = await Fixture.CreateAsync("content"); File.Delete(fixture.Destination); var result = await fixture.VerifyAsync(); Assert.Equal(VerificationEntryStatus.Missing, Assert.Single(result.Entries).Status); }
+    [Fact]
+    public async Task Size_mismatch_is_reported() { using var fixture = await Fixture.CreateAsync("content"); await File.AppendAllTextAsync(fixture.Destination, "changed"); var result = await fixture.VerifyAsync(); Assert.Equal(VerificationEntryStatus.SizeMismatch, Assert.Single(result.Entries).Status); }
+    [Fact]
+    public async Task Timestamp_mismatch_is_reported() { using var fixture = await Fixture.CreateAsync("content"); File.SetLastWriteTimeUtc(fixture.Destination, fixture.Timestamp.AddMinutes(2)); var result = await fixture.VerifyAsync(); Assert.Equal(VerificationEntryStatus.MetadataMismatch, Assert.Single(result.Entries).Status); }
+    [Fact]
+    public async Task Source_changed_since_scan_is_reported() { using var fixture = await Fixture.CreateAsync("content"); File.SetLastWriteTimeUtc(fixture.Source, fixture.Timestamp.AddMinutes(2)); var result = await fixture.VerifyAsync(); Assert.Equal(VerificationEntryStatus.ChangedSinceTransfer, Assert.Single(result.Entries).Status); }
+    [Fact]
+    public async Task Equal_size_hash_mismatch_is_reported() { using var fixture = await Fixture.CreateAsync("content"); await File.WriteAllTextAsync(fixture.Destination, "CONTENT"); File.SetLastWriteTimeUtc(fixture.Destination, fixture.Timestamp); var result = await fixture.VerifyAsync(VerificationLevel.Strong); Assert.Equal(VerificationEntryStatus.ContentMismatch, Assert.Single(result.Entries).Status); }
+    [Fact]
+    public async Task Zero_byte_file_verifies() { using var fixture = await Fixture.CreateAsync(string.Empty); Assert.Equal(VerificationEntryStatus.Verified, Assert.Single((await fixture.VerifyAsync(VerificationLevel.Strong)).Entries).Status); }
+    [Fact]
+    public async Task Large_file_is_streamed() { using var fixture = await Fixture.CreateAsync(new string('x', 2_000_000)); Assert.Equal(2_000_000, (await fixture.VerifyAsync(VerificationLevel.Strong)).VerifiedBytes); }
+    [Fact]
+    public async Task Skipped_cloud_entry_is_not_hashed() { using var fixture = await Fixture.CreateAsync("cloud", TransferState.Skipped, CloudContentState.OnlineOnly); File.Delete(fixture.Destination); var result = await fixture.VerifyAsync(VerificationLevel.Strong); Assert.Equal(VerificationEntryStatus.Skipped, Assert.Single(result.Entries).Status); }
+    [Fact]
+    public async Task Cancellation_returns_cancelled_state() { using var fixture = await Fixture.CreateAsync("content"); using var cancellation = new CancellationTokenSource(); cancellation.Cancel(); var result = await fixture.VerifyAsync(VerificationLevel.Strong, cancellation.Token); Assert.Equal(VerificationRunState.Cancelled, result.State); }
+    [Fact]
+    public async Task Retry_only_processes_requested_failed_subset() { using var fixture = await Fixture.CreateAsync("content"); var result = await fixture.VerifyAsync(retry: new HashSet<string> { "Documents/different.txt" }); Assert.Empty(result.Entries); }
+    [Fact]
+    public async Task Traversal_attempt_is_rejected() { using var fixture = await Fixture.CreateAsync("content", relativePath: "../escape.txt"); await Assert.ThrowsAsync<InvalidDataException>(() => fixture.VerifyAsync()); }
+    [Fact]
+    public async Task Changed_execution_plan_fingerprint_is_rejected() { using var fixture = await Fixture.CreateAsync("content"); await Assert.ThrowsAsync<InvalidDataException>(() => fixture.VerifyWithFingerprintAsync("altered")); }
+    [Fact]
+    public async Task Changed_policy_fingerprint_is_rejected() { using var fixture = await Fixture.CreateAsync("content"); await Assert.ThrowsAsync<InvalidDataException>(() => fixture.VerifyWithPolicyAsync("altered")); }
+
+    private sealed class Fixture : IDisposable
+    {
+        private readonly string root; private readonly MigrationManifestEntry entry; private readonly MigrationExecutionPlan plan;
+        private Fixture(string root, string source, string destination, DateTime timestamp, MigrationManifestEntry entry, MigrationExecutionPlan plan) { this.root = root; Source = source; Destination = destination; Timestamp = timestamp; this.entry = entry; this.plan = plan; }
+        public string Source { get; } public string Destination { get; } public DateTime Timestamp { get; }
+        public static async Task<Fixture> CreateAsync(string content, TransferState state = TransferState.Pending, CloudContentState cloud = CloudContentState.LocallyAvailable, string relativePath = "file.txt") { var root = Path.Combine(Path.GetTempPath(), "RoboTransferTests", Guid.NewGuid().ToString("N")); var sourceRoot = Path.Combine(root, "source"); var destinationRoot = Path.Combine(root, "destination"); Directory.CreateDirectory(sourceRoot); Directory.CreateDirectory(Path.Combine(destinationRoot, "Documents")); var source = Path.Combine(sourceRoot, "file.txt"); var destination = Path.Combine(destinationRoot, "Documents", "file.txt"); await File.WriteAllTextAsync(source, content); await File.WriteAllTextAsync(destination, content); var timestamp = DateTime.UtcNow.AddMinutes(-5); File.SetLastWriteTimeUtc(source, timestamp); File.SetLastWriteTimeUtc(destination, timestamp); var entry = new MigrationManifestEntry(relativePath, new FileInfo(source).Length, timestamp, FileAttributes.Normal, KnownFolderKind.Documents, cloud, state, VerificationState.NotVerified, state == TransferState.Skipped ? ErrorCategory.CloudContentUnavailable : null, null); var plan = new MigrationExecutionPlan(Guid.NewGuid(), DateTimeOffset.UtcNow, "machine", "profile", [KnownFolderKind.Documents], "manifest", Path.Combine(root, "manifest.jsonl"), 1, entry.FileSize, MigrationRoute.ExternalStorage, MigrationStrategy.RobocopyKnownFolders, "disk", destinationRoot, 100, ConflictPolicy.KeepBoth, "skip", VerificationLevel.Standard, 1, "policy", "robocopy", "1", "1"); return new(root, source, destination, timestamp, entry, plan); }
+        public Task<VerificationResult> VerifyAsync(VerificationLevel mode = VerificationLevel.Standard, CancellationToken token = default, IReadOnlySet<string>? retry = null) => new FileVerificationEngine(new Reader(entry)).VerifyAsync(new(plan, plan.Fingerprint, plan.PolicyFingerprint, new Dictionary<KnownFolderKind, string> { [KnownFolderKind.Documents] = Path.GetDirectoryName(Source)! }, plan.DestinationPath, mode, retry), cancellationToken: token);
+        public Task<VerificationResult> VerifyWithFingerprintAsync(string fingerprint) => new FileVerificationEngine(new Reader(entry)).VerifyAsync(new(plan, fingerprint, plan.PolicyFingerprint, new Dictionary<KnownFolderKind, string> { [KnownFolderKind.Documents] = Path.GetDirectoryName(Source)! }, plan.DestinationPath, VerificationLevel.Standard));
+        public Task<VerificationResult> VerifyWithPolicyAsync(string fingerprint) => new FileVerificationEngine(new Reader(entry)).VerifyAsync(new(plan, plan.Fingerprint, fingerprint, new Dictionary<KnownFolderKind, string> { [KnownFolderKind.Documents] = Path.GetDirectoryName(Source)! }, plan.DestinationPath, VerificationLevel.Standard));
+        public void Dispose() { try { Directory.Delete(root, true); } catch (IOException) { } }
+    }
+    private sealed class Reader(MigrationManifestEntry entry) : IManifestReader { public Task<ManifestReadResult> InspectAsync(string path, CancellationToken cancellationToken = default) => Task.FromResult(new ManifestReadResult(ManifestReadState.Complete, new(entry.SourceKnownFolder == KnownFolderKind.Documents ? Guid.Empty : Guid.NewGuid(), DateTimeOffset.UtcNow, 1, entry.FileSize, VerificationLevel.Standard, ConflictPolicy.KeepBoth), new(Guid.Empty, DateTimeOffset.UtcNow, 1, entry.FileSize, entry.TransferState == TransferState.Skipped ? 0 : 1, entry.TransferState == TransferState.Skipped ? 0 : entry.FileSize, entry.TransferState == TransferState.Skipped ? 1 : 0, 0, ManifestCompletionState.Complete), null)); public async IAsyncEnumerable<MigrationManifestEntry> ReadEntriesAsync(string path, [System.Runtime.CompilerServices.EnumeratorCancellation] CancellationToken cancellationToken = default) { cancellationToken.ThrowIfCancellationRequested(); yield return entry; await Task.Yield(); } }
+}
