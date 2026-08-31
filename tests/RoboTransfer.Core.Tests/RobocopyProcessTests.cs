@@ -10,17 +10,17 @@ public sealed class RobocopyProcessTests
     [Fact]
     public async Task Injected_runner_receives_argument_list_and_success()
     {
-        using var tool = new TempFile(); var runner = new FakeRunner(new(1, false, ["copied"], ["warning"], DateTimeOffset.UtcNow, DateTimeOffset.UtcNow)); var result = await new RobocopyExecutor(runner).ExecuteAsync(Request(tool.Path, ConflictPolicy.Skip)); Assert.True(result.Succeeded); Assert.NotNull(runner.Start); Assert.False(runner.Start!.UseShellExecute); Assert.Contains("/XJ", runner.Start.ArgumentList);
+        using var tool = new TempFile(); var runner = new FakeRunner(new(1, false, ["copied"], ["warning"], DateTimeOffset.UtcNow, DateTimeOffset.UtcNow)); var result = await new RobocopyExecutor(runner).ExecuteAsync(Request(tool.Path, ConflictPolicy.Skip), cancellationToken: TestContext.Current.CancellationToken); Assert.True(result.Succeeded); Assert.NotNull(runner.Start); Assert.False(runner.Start!.UseShellExecute); Assert.Contains("/XJ", runner.Start.ArgumentList);
     }
     [Fact]
     public async Task Cancellation_result_is_interrupted()
     {
-        using var tool = new TempFile(); var result = await new RobocopyExecutor(new FakeRunner(new(0, true, [], [], DateTimeOffset.UtcNow, DateTimeOffset.UtcNow))).ExecuteAsync(Request(tool.Path, ConflictPolicy.Skip)); Assert.True(result.Cancelled); Assert.Equal(ErrorCategory.Cancelled, Assert.Single(result.Errors).Category);
+        using var tool = new TempFile(); var result = await new RobocopyExecutor(new FakeRunner(new(0, true, [], [], DateTimeOffset.UtcNow, DateTimeOffset.UtcNow))).ExecuteAsync(Request(tool.Path, ConflictPolicy.Skip), cancellationToken: TestContext.Current.CancellationToken); Assert.True(result.Cancelled); Assert.Equal(ErrorCategory.Cancelled, Assert.Single(result.Errors).Category);
     }
     [Fact]
     public async Task Failure_exit_is_process_failure()
     {
-        using var tool = new TempFile(); var result = await new RobocopyExecutor(new FakeRunner(new(8, false, [], [], DateTimeOffset.UtcNow, DateTimeOffset.UtcNow))).ExecuteAsync(Request(tool.Path, ConflictPolicy.Skip)); Assert.False(result.Succeeded); Assert.Equal(ErrorCategory.ProcessFailure, Assert.Single(result.Errors).Category);
+        using var tool = new TempFile(); var result = await new RobocopyExecutor(new FakeRunner(new(8, false, [], [], DateTimeOffset.UtcNow, DateTimeOffset.UtcNow))).ExecuteAsync(Request(tool.Path, ConflictPolicy.Skip), cancellationToken: TestContext.Current.CancellationToken); Assert.False(result.Succeeded); Assert.Equal(ErrorCategory.ProcessFailure, Assert.Single(result.Errors).Category);
     }
     [Fact]
     public void Unsafe_switches_are_absent_for_every_automatic_policy()
