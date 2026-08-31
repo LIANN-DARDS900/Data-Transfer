@@ -1,0 +1,8 @@
+<Project Sdk="WixToolset.Sdk/5.0.2">
+  <PropertyGroup>
+    <Platform>x64</Platform>
+    <InstallerPlatform>x64</InstallerPlatform>
+    <OutputName>RoboTransfer-$(VersionPrefix)-win-x64</OutputName>
+    <PublishDir Condition="'$(PublishDir)' == ''">$(MSBuildThisFileDirectory)..\..\artifacts\publish\framework-dependent</PublishDir>
+  </PropertyGroup>
+</Project>

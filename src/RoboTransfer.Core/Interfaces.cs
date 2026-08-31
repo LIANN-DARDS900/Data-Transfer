@@ -4,6 +4,7 @@ public interface ICapabilityDetector { Task<EnvironmentCapabilities> DetectAsync
 public interface IUserProfileDetector { Task<IReadOnlyList<UserProfile>> DetectAsync(CancellationToken cancellationToken = default); }
 public interface IStorageDetector { Task<IReadOnlyList<StorageVolume>> DetectAsync(CancellationToken cancellationToken = default); }
 public interface IToolDetector { Task<ToolCapability> DetectAsync(CancellationToken cancellationToken = default); }
+public interface IExecutableTrustValidator { Task<ExecutableTrustResult> ValidateAsync(string path, bool requireMicrosoftPublisher, CancellationToken cancellationToken = default); }
 public interface IMigrationPlanner { MigrationPlan CreatePlan(PolicyProfile policy, EnvironmentCapabilities capabilities, long? requiredBytes = null, bool cloudStateUncertain = false); }
 public interface IPolicyProvider { Task<PolicyLoadResult> LoadAsync(CancellationToken cancellationToken = default); }
 public interface IMigrationJournal
