@@ -1,5 +1,6 @@
 using RoboTransfer.Core;
 using RoboTransfer.Verification;
+using Xunit;
 
 namespace RoboTransfer.Core.Tests;
 

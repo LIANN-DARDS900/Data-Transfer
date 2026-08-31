@@ -1,6 +1,7 @@
 using System.Text.Json;
 using RoboTransfer.Core;
 using RoboTransfer.Persistence;
+using Xunit;
 
 namespace RoboTransfer.Core.Tests;
 

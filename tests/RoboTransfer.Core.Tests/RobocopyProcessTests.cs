@@ -1,6 +1,7 @@
 using System.Diagnostics;
 using RoboTransfer.Core;
 using RoboTransfer.Robocopy;
+using Xunit;
 
 namespace RoboTransfer.Core.Tests;
 
