@@ -31,7 +31,16 @@ public sealed class ManifestAndTransferTests
     {
         using var source = new Temp(); using var destination = new Temp(); await File.WriteAllTextAsync(Path.Combine(source.Path, "a.txt"), "new", TestContext.Current.CancellationToken); await File.WriteAllTextAsync(Path.Combine(destination.Path, "a.txt"), "old", TestContext.Current.CancellationToken); await File.WriteAllTextAsync(Path.Combine(destination.Path, "a (RoboTransfer copy).txt"), "older", TestContext.Current.CancellationToken);
         var plan = Plan(ConflictPolicy.KeepBoth); var engine = new KeepBothTransferEngine(new FakeReader([Entry("a.txt", 3)])); var result = await engine.ExecuteAsync(new(plan, source.Path, destination.Path, KnownFolderKind.Documents), cancellationToken: TestContext.Current.CancellationToken);
-        Assert.True(result.Succeeded); Assert.Equal("old", await File.ReadAllTextAsync(Path.Combine(destination.Path, "a.txt"), TestContext.Current.CancellationToken)); Assert.Equal("new", await File.ReadAllTextAsync(Path.Combine(destination.Path, "a (RoboTransfer copy 2).txt"), TestContext.Current.CancellationToken));
+        Assert.True(result.Succeeded); Assert.Equal("old", await File.ReadAllTextAsync(Path.Combine(destination.Path, "a.txt"), TestContext.Current.CancellationToken)); Assert.Equal("older", await File.ReadAllTextAsync(Path.Combine(destination.Path, "a (RoboTransfer copy).txt"), TestContext.Current.CancellationToken)); Assert.Equal("new", await File.ReadAllTextAsync(Path.Combine(destination.Path, "a (RoboTransfer copy 2).txt"), TestContext.Current.CancellationToken));
+    }
+    [Fact]
+    public async Task Keep_both_failure_cleans_only_candidate_owned_by_current_operation()
+    {
+        using var source = new Temp(); using var destination = new Temp(); var sourcePath = Path.Combine(source.Path, "a.txt"); var original = Path.Combine(destination.Path, "a.txt"); var firstCopy = Path.Combine(destination.Path, "a (RoboTransfer copy).txt"); var partial = Path.Combine(destination.Path, "a (RoboTransfer copy 2).txt");
+        await File.WriteAllTextAsync(sourcePath, "new", TestContext.Current.CancellationToken); await File.WriteAllTextAsync(original, "old", TestContext.Current.CancellationToken); await File.WriteAllTextAsync(firstCopy, "older", TestContext.Current.CancellationToken);
+        var engine = new KeepBothTransferEngine(new FakeReader([Entry("a.txt", 3)]), async (_, output, cancellationToken) => { await output.WriteAsync("x"u8.ToArray(), cancellationToken); throw new IOException("Injected failure after candidate creation."); });
+        var result = await engine.ExecuteAsync(new(Plan(ConflictPolicy.KeepBoth), source.Path, destination.Path, KnownFolderKind.Documents), cancellationToken: TestContext.Current.CancellationToken);
+        Assert.False(result.Succeeded); Assert.Equal("old", await File.ReadAllTextAsync(original, TestContext.Current.CancellationToken)); Assert.Equal("older", await File.ReadAllTextAsync(firstCopy, TestContext.Current.CancellationToken)); Assert.False(File.Exists(partial));
     }
     [Fact]
     public async Task Reconciliation_never_claims_verification()

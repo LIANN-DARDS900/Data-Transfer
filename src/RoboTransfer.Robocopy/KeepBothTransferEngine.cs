@@ -2,7 +2,7 @@ using RoboTransfer.Core;
 
 namespace RoboTransfer.Robocopy;
 
-public sealed class KeepBothTransferEngine(IManifestReader manifests) : IOperationalTransferEngine
+public sealed class KeepBothTransferEngine(IManifestReader manifests, Func<Stream, Stream, CancellationToken, Task>? copyOperation = null) : IOperationalTransferEngine
 {
     public async Task<TransferResult> ExecuteAsync(MigrationExecutionRequest request, IProgress<TransferProgress>? progress = null, CancellationToken cancellationToken = default)
     {
@@ -35,20 +35,29 @@ public sealed class KeepBothTransferEngine(IManifestReader manifests) : IOperati
         catch (OperationCanceledException) { return new(false, true, files, bytes, [.. errors, new(ErrorCategory.Cancelled, "Transfer was deliberately interrupted and can be resumed after revalidation.")]); }
     }
 
-    private static async Task CopyKeepBothAsync(string source, string desired, MigrationManifestEntry entry, CancellationToken cancellationToken)
+    private async Task CopyKeepBothAsync(string source, string desired, MigrationManifestEntry entry, CancellationToken cancellationToken)
     {
+        await using var input = new FileStream(source, FileMode.Open, FileAccess.Read, FileShare.Read, 128 * 1024, FileOptions.Asynchronous | FileOptions.SequentialScan);
         for (var collision = 0; ; collision++)
         {
             var candidate = collision == 0 ? desired : Candidate(desired, collision);
+            var createdByThisOperation = false;
             try
             {
-                try { await using (var input = new FileStream(source, FileMode.Open, FileAccess.Read, FileShare.Read, 128 * 1024, FileOptions.Asynchronous | FileOptions.SequentialScan)) await using (var output = new FileStream(candidate, FileMode.CreateNew, FileAccess.Write, FileShare.None, 128 * 1024, FileOptions.Asynchronous | FileOptions.SequentialScan | FileOptions.WriteThrough)) { await input.CopyToAsync(output, 128 * 1024, cancellationToken); await output.FlushAsync(cancellationToken); } File.SetLastWriteTimeUtc(candidate, entry.LastWriteTime.UtcDateTime); File.SetAttributes(candidate, entry.Attributes & ~(FileAttributes.ReparsePoint | FileAttributes.Offline)); }
-                catch { if (File.Exists(candidate)) File.Delete(candidate); throw; }
+                await using (var output = new FileStream(candidate, FileMode.CreateNew, FileAccess.Write, FileShare.None, 128 * 1024, FileOptions.Asynchronous | FileOptions.SequentialScan | FileOptions.WriteThrough))
+                {
+                    createdByThisOperation = true;
+                    if (copyOperation is null) await input.CopyToAsync(output, 128 * 1024, cancellationToken); else await copyOperation(input, output, cancellationToken);
+                    await output.FlushAsync(cancellationToken);
+                }
+                File.SetLastWriteTimeUtc(candidate, entry.LastWriteTime.UtcDateTime); File.SetAttributes(candidate, entry.Attributes & ~(FileAttributes.ReparsePoint | FileAttributes.Offline));
                 return;
             }
-            catch (IOException) when (File.Exists(candidate)) { }
+            catch (IOException) when (!createdByThisOperation && File.Exists(candidate)) { }
+            catch { if (createdByThisOperation) TryDeleteOwnedCandidate(candidate); throw; }
         }
     }
+    private static void TryDeleteOwnedCandidate(string candidate) { try { File.Delete(candidate); } catch (Exception ex) when (ex is IOException or UnauthorizedAccessException) { } }
     private static string Candidate(string path, int collision) { var suffix = collision == 1 ? " (RoboTransfer copy)" : $" (RoboTransfer copy {collision})"; return Path.Combine(Path.GetDirectoryName(path)!, Path.GetFileNameWithoutExtension(path) + suffix + Path.GetExtension(path)); }
     private static string Canonical(string path) => Path.TrimEndingDirectorySeparator(Path.GetFullPath(path));
     private static string Within(string root, string relative)

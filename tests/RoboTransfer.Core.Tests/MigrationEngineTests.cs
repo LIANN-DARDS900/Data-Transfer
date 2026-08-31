@@ -39,8 +39,9 @@ public sealed class MigrationEngineTests
     [Fact]
     public void Keep_both_names_are_deterministic_and_collision_safe()
     {
-        var existing = new HashSet<string>(StringComparer.Ordinal) { "/out/document.docx", "/out/document (RoboTransfer copy).docx" };
-        Assert.Equal("/out/document (RoboTransfer copy 2).docx", ConflictResolver.GetKeepBothPath("/out/document.docx", existing.Contains));
+        var output = Path.Combine("out", "document.docx"); var firstCopy = Path.Combine("out", "document (RoboTransfer copy).docx"); var secondCopy = Path.Combine("out", "document (RoboTransfer copy 2).docx");
+        var existing = new HashSet<string>(StringComparer.Ordinal) { output, firstCopy };
+        Assert.Equal(secondCopy, ConflictResolver.GetKeepBothPath(output, existing.Contains));
     }
 
     [Fact]
