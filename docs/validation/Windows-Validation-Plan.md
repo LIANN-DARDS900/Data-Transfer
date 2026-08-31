@@ -2,7 +2,9 @@
 
 ## Objective and evidence
 
-Reproduce Phase 1 detection and policy decisions on managed Windows 11 x64 endpoints. Record OS build, RoboTransfer commit, device model, user privilege, policy file hash, screenshots, structured logs, expected result, actual result, and pass/fail for every case. Never use production employee data; use a synthetic test profile and approved test destinations.
+Reproduce Phase 3 detection, transfer, verification, reporting, and policy decisions on managed Windows 11 x64 endpoints. Record OS build, RoboTransfer commit, device model, user privilege, policy file hash, screenshots, structured logs, expected result, actual result, and pass/fail for every case. Never use production employee data; use a synthetic test profile and approved test destinations.
+
+Exercise standard and strong verification on zero-byte, large, locked, changed, missing, mismatched, cloud-skipped, long-path, and access-denied files. Confirm cancellation leaves a retryable record and retry processes only failed identities. Validate JSON/HTML schema, redaction, final-state mapping, rotating diagnostics, corrupted manifest/verification rejection, 1366×768 through 4K scaling, and strong-verification I/O impact on representative external and approved network storage.
 
 ## Baseline procedure
 

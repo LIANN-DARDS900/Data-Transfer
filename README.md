@@ -4,14 +4,20 @@ RoboTransfer is a policy-aware Windows laptop migration orchestrator for technic
 
 > **RoboTransfer does not bypass enterprise network or endpoint security controls. It operates only through migration mechanisms explicitly allowed by policy/configuration.**
 
-**Lifecycle status: Development.** Phase 1 is a non-destructive analysis and architecture foundation. It is not approved for production migrations and contains no active transfer implementation.
+**Lifecycle status: ALPHA with Phase 3 implementation pending independent Windows CI and real-device qualification.** RoboTransfer now separates transfer from standard or policy-required SHA-256 verification and produces durable redacted JSON and PDF-ready HTML technician reports. It may advance to BETA CANDIDATE only after successful CI; it is not production ready.
+
+The staged workflow is Environment → Source → Scan → Migration Plan → Transfer → Verification → Report. All seven operational stages are active; verification and reporting remain independent from transfer. [ADR-004](docs/architecture/ADR-004-Operational-Migration-Engine.md) specifies transfer safety behavior.
+
+Phase 2 manifests are schema-versioned JSONL streams with a required completion footer. Default `KeepBoth` execution reserves collision-safe destination names without overwriting or modifying sources. Transfer completion is reconciled against eligible manifest counts and bytes and remains explicitly separate from pending verification. Interrupted sessions and immutable execution plans are discovered locally for Inspect, revalidated Resume, or Abandon.
+
+Phase 3 standard verification checks current source metadata against the manifest and destination existence, size, and timestamp. Strong verification additionally streams SHA-256 over both current source and destination, detects changes during hashing, and never hashes intentionally skipped cloud data. Failed verification entries can be retried without rerunning the entire migration. Durable reports use explicit final states: Success, SuccessWithWarnings, Incomplete, VerificationFailed, Failed, or Cancelled. See [ADR-005](docs/architecture/ADR-005-Verification-And-Durable-Reports.md).
 
 ## Security and privacy posture
 
 - Missing, malformed, or unsupported policy fails closed to a conservative profile.
 - Network checks are restricted to explicit, validated UNC paths; there is no LAN discovery, subnet scan, port scan, or listener.
 - The application does not change firewall, Defender, Group Policy, PowerShell, SMB, services, drivers, or endpoint-protection settings.
-- Robocopy and USMT are detected but never executed in Phase 1. USMT binaries are not redistributed.
+- Robocopy is executed only through the Phase 2 constrained adapter. USMT remains detection-only and its binaries are not redistributed.
 - Fixed disks are not assumed to be internal or external: physical-disk evidence is used, and uncertainty remains `Unknown`.
 - Registered Windows profiles and shell-folder mappings replace blind `C:\Users` enumeration and path guessing.
 - Transfer state and verification state are independent. Strong verification means future SHA-256 comparison of source and destination; Phase 1 does not claim it occurred.
