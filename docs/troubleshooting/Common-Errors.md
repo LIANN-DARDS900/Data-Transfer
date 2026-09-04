@@ -1,0 +1,7 @@
+# Common errors and security boundaries
+
+Technician messages follow **what happened / why / next action** and never require raw stack traces. `ToolUnavailable` means the canonical System32 executable or technical Authenticode facility is unavailable. `PolicyForbidden` means executable location/signature/Microsoft signer authorization or route policy failed closed. `DestinationChanged`, `StorageDisconnected`, `InsufficientSpace`, `FileLocked`, `AccessDenied`, `CloudContentUnavailable`, and `VerificationMismatch` require correction followed by Inspect/Resume or failed-subset retry as appropriate.
+
+RoboTransfer never changes firewall, Defender/EDR, Group Policy, PowerShell execution policy, SMB, shares, credentials, OneDrive/BitLocker state, and never installs listeners/services/drivers/tasks. It performs no discovery, port scan, telemetry, cloud upload, remote administration, destructive source move/delete, `/MIR`, or silent overwrite.
+
+Known limitations: physical performance depends on endpoint, filesystem, USB bridge and security agents; UNC free space can be unknowable; strict publisher validation requires Windows trust APIs and chain availability; user-local evidence inherits profile ACL protection; exceptionally large per-entry verification results remain a bounded-qualification concern until streaming record format migration is completed. Production readiness requires a controlled physical enterprise pilot.

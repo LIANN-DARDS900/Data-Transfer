@@ -1,0 +1,15 @@
+<Wix xmlns="http://wixtoolset.org/schemas/v4/wxs">
+  <Package Name="RoboTransfer" Manufacturer="RoboTransfer Qualification Publisher" Version="0.4.0" UpgradeCode="6B57CE8B-5038-4AE2-A7E2-03794E477042" Scope="perMachine" InstallerVersion="500" Compressed="yes">
+    <SummaryInformation Description="RoboTransfer controlled qualification build" Manufacturer="RoboTransfer Qualification Publisher" />
+    <MajorUpgrade DowngradeErrorMessage="A newer version of RoboTransfer is already installed." Schedule="afterInstallInitialize" />
+    <MediaTemplate EmbedCab="yes" />
+
+    <StandardDirectory Id="ProgramFiles64Folder">
+      <Directory Id="INSTALLFOLDER" Name="RoboTransfer" />
+    </StandardDirectory>
+
+    <Feature Id="ProductFeature" Title="RoboTransfer" Level="1">
+      <Files Directory="INSTALLFOLDER" Include="$(PublishDir)\**" />
+    </Feature>
+  </Package>
+</Wix>
