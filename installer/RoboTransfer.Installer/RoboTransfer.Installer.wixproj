@@ -4,5 +4,6 @@
     <InstallerPlatform>x64</InstallerPlatform>
     <OutputName>RoboTransfer-$(VersionPrefix)-win-x64</OutputName>
     <PublishDir Condition="'$(PublishDir)' == ''">$(MSBuildThisFileDirectory)..\..\artifacts\publish\framework-dependent</PublishDir>
+    <DefineConstants>$(DefineConstants);PublishDir=$(PublishDir)</DefineConstants>
   </PropertyGroup>
 </Project>
