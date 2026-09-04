@@ -3,11 +3,11 @@
     <SummaryInformation Description="RoboTransfer controlled qualification build" Manufacturer="RoboTransfer Qualification Publisher" />
     <MajorUpgrade DowngradeErrorMessage="A newer version of RoboTransfer is already installed." Schedule="afterInstallInitialize" />
     <MediaTemplate EmbedCab="yes" />
+
     <StandardDirectory Id="ProgramFiles64Folder">
-      <Directory Id="INSTALLFOLDER" Name="RoboTransfer">
-        <Files Include="$(PublishDir)\**" />
-      </Directory>
+      <Directory Id="INSTALLFOLDER" Name="RoboTransfer" />
     </StandardDirectory>
+
     <StandardDirectory Id="ProgramMenuFolder">
       <Directory Id="ApplicationProgramsFolder" Name="RoboTransfer">
         <Component Id="StartMenuShortcut" Guid="B57D1021-99BC-46CF-8145-C17DDC6AAB48">
@@ -17,8 +17,9 @@
         </Component>
       </Directory>
     </StandardDirectory>
+
     <Feature Id="ProductFeature" Title="RoboTransfer" Level="1">
-      <ComponentGroupRef Id="Files_INSTALLFOLDER" />
+      <Files Directory="INSTALLFOLDER" Include="$(PublishDir)\**" />
       <ComponentRef Id="StartMenuShortcut" />
     </Feature>
   </Package>
