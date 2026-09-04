@@ -8,19 +8,8 @@
       <Directory Id="INSTALLFOLDER" Name="RoboTransfer" />
     </StandardDirectory>
 
-    <StandardDirectory Id="ProgramMenuFolder">
-      <Directory Id="ApplicationProgramsFolder" Name="RoboTransfer">
-        <Component Id="StartMenuShortcut" Guid="B57D1021-99BC-46CF-8145-C17DDC6AAB48">
-          <Shortcut Id="ApplicationStartMenuShortcut" Name="RoboTransfer" Description="RoboTransfer migration qualification application" Target="[INSTALLFOLDER]RoboTransfer.exe" WorkingDirectory="INSTALLFOLDER" />
-          <RemoveFolder Id="RemoveApplicationProgramsFolder" Directory="ApplicationProgramsFolder" On="uninstall" />
-          <RegistryValue Root="HKLM" Key="Software\RoboTransfer" Name="Installed" Type="integer" Value="1" KeyPath="yes" />
-        </Component>
-      </Directory>
-    </StandardDirectory>
-
     <Feature Id="ProductFeature" Title="RoboTransfer" Level="1">
       <Files Directory="INSTALLFOLDER" Include="$(PublishDir)\**" />
-      <ComponentRef Id="StartMenuShortcut" />
     </Feature>
   </Package>
 </Wix>
