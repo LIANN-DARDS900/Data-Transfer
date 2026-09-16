@@ -3,6 +3,7 @@ using System.Diagnostics;
 using System.Runtime.InteropServices;
 using System.Security.Cryptography;
 using System.Security.Cryptography.X509Certificates;
+using System.Text;
 using RoboTransfer.Core;
 
 namespace RoboTransfer.Robocopy;
@@ -112,8 +113,9 @@ public sealed class WindowsExecutableTrustValidator : IExecutableTrustValidator
             return new WindowsAuthenticodeResult(false, false, null, "Windows PowerShell is unavailable.");
 
         const string command = "$s = Get-AuthenticodeSignature -LiteralPath $env:ROBOTRANSFER_TRUST_PATH; " +
-                               "[Console]::Out.WriteLine([string]$s.Status); " +
-                               "if ($null -ne $s.SignerCertificate) { [Console]::Out.WriteLine([string]$s.SignerCertificate.Subject) } else { [Console]::Out.WriteLine('') }";
+                               "Write-Output ([string]$s.Status); " +
+                               "if ($null -ne $s.SignerCertificate) { Write-Output ([string]$s.SignerCertificate.Subject) } else { Write-Output '' }";
+        var encodedCommand = Convert.ToBase64String(Encoding.Unicode.GetBytes(command));
 
         var startInfo = new ProcessStartInfo
         {
@@ -126,8 +128,8 @@ public sealed class WindowsExecutableTrustValidator : IExecutableTrustValidator
         startInfo.ArgumentList.Add("-NoLogo");
         startInfo.ArgumentList.Add("-NoProfile");
         startInfo.ArgumentList.Add("-NonInteractive");
-        startInfo.ArgumentList.Add("-Command");
-        startInfo.ArgumentList.Add(command);
+        startInfo.ArgumentList.Add("-EncodedCommand");
+        startInfo.ArgumentList.Add(encodedCommand);
         startInfo.Environment["ROBOTRANSFER_TRUST_PATH"] = path;
 
         using var process = new Process { StartInfo = startInfo };
