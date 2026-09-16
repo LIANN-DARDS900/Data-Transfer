@@ -28,6 +28,14 @@ public sealed class ProductionReadinessTests : IDisposable
         var result = await new WindowsExecutableTrustValidator().ValidateAsync("robocopy.exe", true, TestContext.Current.CancellationToken);
         Assert.Equal(ExecutableTrustStatus.Unavailable, result.Status); Assert.False(result.IsAuthorized);
     }
+    [Fact] public async Task Canonical_system_robocopy_is_authorized_on_windows()
+    {
+        if (!OperatingSystem.IsWindows()) return;
+        var robocopy = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "System32", "robocopy.exe");
+        var result = await new WindowsExecutableTrustValidator().ValidateAsync(robocopy, true, TestContext.Current.CancellationToken);
+        Assert.True(result.IsAuthorized, $"{result.Status}: {result.Detail}");
+        Assert.Contains("Microsoft", result.Publisher ?? string.Empty, StringComparison.OrdinalIgnoreCase);
+    }
     [Fact] public void Version_metadata_is_not_blank() => Assert.False(string.IsNullOrWhiteSpace(ApplicationIdentity.Version));
     public void Dispose() { if (Directory.Exists(root)) Directory.Delete(root, true); if (Directory.Exists(root + "-target")) Directory.Delete(root + "-target", true); }
 }
