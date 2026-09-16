@@ -33,7 +33,7 @@ public sealed class ProductionReadinessTests : IDisposable
         if (!OperatingSystem.IsWindows()) return;
         var robocopy = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "System32", "robocopy.exe");
         var result = await new WindowsExecutableTrustValidator().ValidateAsync(robocopy, true, TestContext.Current.CancellationToken);
-        Assert.True(result.IsAuthorized, $"{result.Status}: {result.Detail}");
+        Assert.True(result.IsAuthorized, $"{result.Status}: {result.Explanation}");
         Assert.Contains("Microsoft", result.Publisher ?? string.Empty, StringComparison.OrdinalIgnoreCase);
     }
     [Fact] public void Version_metadata_is_not_blank() => Assert.False(string.IsNullOrWhiteSpace(ApplicationIdentity.Version));
