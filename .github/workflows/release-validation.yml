@@ -1,0 +1,36 @@
+name: Release validation
+on:
+  workflow_dispatch:
+  pull_request:
+    branches: [main]
+permissions: { contents: read }
+jobs:
+  qualify:
+    runs-on: windows-2025
+    steps:
+      - uses: actions/checkout@v4
+        with: { fetch-depth: 0 }
+      - uses: actions/setup-dotnet@v4
+        with: { dotnet-version: '10.0.x' }
+      - run: dotnet restore RoboTransfer.sln
+      - run: dotnet build RoboTransfer.sln -c Release --no-restore
+      - run: dotnet test RoboTransfer.sln -c Release --no-build
+      - name: Audit application dependencies
+        run: dotnet list RoboTransfer.sln package --include-transitive --vulnerable
+      - name: Publish preferred framework-dependent win-x64 package
+        run: dotnet publish src/RoboTransfer.App/RoboTransfer.App.csproj -c Release -r win-x64 --no-restore --self-contained false -o artifacts/publish/framework-dependent -p:SourceRevisionId=${{ github.sha }} -p:VersionSuffix=rc.${{ github.run_number }}
+      - name: Validate publish payload
+        shell: pwsh
+        run: if (!(Test-Path artifacts/publish/framework-dependent/RoboTransfer.exe)) { throw 'Missing RoboTransfer.exe' }
+      - name: Build unsigned qualification MSI
+        run: dotnet build installer/RoboTransfer.Installer/RoboTransfer.Installer.wixproj -c Release -p:PublishDir=${{ github.workspace }}\artifacts\publish\framework-dependent -p:VersionPrefix=0.4.0
+      - name: Validate MSI
+        shell: pwsh
+        run: if (!(Get-ChildItem installer -Recurse -Filter *.msi)) { throw 'Missing MSI' }
+      - uses: actions/upload-artifact@v4
+        with:
+          name: RoboTransfer-unsigned-qualification
+          path: |
+            artifacts/publish/framework-dependent/**
+            installer/**/bin/Release/**/*.msi
+            installer/**/bin/x64/Release/**/*.msi

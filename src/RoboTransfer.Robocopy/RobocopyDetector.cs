@@ -1,13 +1,16 @@
 using System.Diagnostics;
 using RoboTransfer.Core;
 namespace RoboTransfer.Robocopy;
-public sealed class RobocopyDetector : IToolDetector
+public sealed class RobocopyDetector(IExecutableTrustValidator? trustValidator = null) : IToolDetector
 {
-    public Task<ToolCapability> DetectAsync(CancellationToken cancellationToken = default)
+    public async Task<ToolCapability> DetectAsync(CancellationToken cancellationToken = default)
     {
         cancellationToken.ThrowIfCancellationRequested();
-        if (!OperatingSystem.IsWindows()) return Task.FromResult(new ToolCapability("Robocopy", CapabilityState.NotAvailable, Detail: "Robocopy detection requires Windows."));
-        var root = Environment.GetEnvironmentVariable("SystemRoot"); return Task.FromResult(DetectAtPath(root is null ? null : Path.Combine(root, "System32", "robocopy.exe")));
+        if (!OperatingSystem.IsWindows()) return new ToolCapability("Robocopy", CapabilityState.NotAvailable, Detail: "Robocopy detection requires Windows.");
+        var root = Environment.GetEnvironmentVariable("SystemRoot"); var detected = DetectAtPath(root is null ? null : Path.Combine(root, "System32", "robocopy.exe"));
+        if (detected.State != CapabilityState.Available || trustValidator is null || detected.ExecutablePath is null) return detected;
+        var trust = await trustValidator.ValidateAsync(detected.ExecutablePath, requireMicrosoftPublisher: true, cancellationToken);
+        return trust.IsAuthorized ? detected with { Detail = trust.Explanation } : detected with { State = trust.Status == ExecutableTrustStatus.Unavailable ? CapabilityState.Unknown : CapabilityState.ForbiddenByPolicy, Detail = trust.Explanation };
     }
     public static ToolCapability DetectAtPath(string? path)
     {
