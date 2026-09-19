@@ -1,0 +1,7 @@
+# Performance qualification procedure
+
+Generate only in a dedicated test-owned directory with `tools/Qualification/New-SyntheticDataset.ps1`. Existing directories require the `.robotransfer-qualification-owned` marker. Sparse 1/10/50 GB generation avoids needless writes; determine whether the target storage preserves sparsity before treating it as representative. No benchmark number is supplied or implied.
+
+Run `10k-small`, `100k-small`, `1gb`, `10gb`, `50gb` only where capacity permits, and `mixed`. For scan capture entries/s, discovered bytes/s, elapsed, peak working set and CPU. For transfer capture files/s, MiB/s, bytes, elapsed, failures, CPU and peak working set. For verification capture files/s, hashing MiB/s, source/destination read throughput and elapsed. Use Windows Performance Recorder, Performance Monitor, or `Get-Process RoboTransfer` sampling without changing endpoint security.
+
+Each result record must include UTC timestamp, RoboTransfer informational version/commit, dataset and generator parameters, redacted machine ID (approved one-way inventory identifier), CPU model, installed RAM, storage type/model in redacted form, filesystem, route, runtime version, verification level, security-agent presence category, measured values, and raw evidence location. Do not compare sparse-file results with allocated production data. Repeat at least three times after a documented warm/cold-cache choice and retain all samples, including failures.
