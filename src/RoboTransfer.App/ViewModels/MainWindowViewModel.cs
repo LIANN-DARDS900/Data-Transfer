@@ -24,6 +24,7 @@ public sealed class MainWindowViewModel : ViewModelBase
     public OperationalWorkflowViewModel Operations { get; } public IReadOnlyList<WorkflowStep> Workflow { get; } public IReadOnlyList<MigrationRole> Roles { get; } = Enum.GetValues<MigrationRole>();
     public ObservableCollection<EnvironmentRow> EnvironmentRows { get; } = []; public ObservableCollection<UserProfile> Profiles { get; } = [];
     public ICommand RefreshCommand { get; }
+    public string ApplicationVersion => ApplicationIdentity.Version;
     public bool IsAnalyzing { get => isAnalyzing; private set { if (Set(ref isAnalyzing, value)) { OnPropertyChanged(nameof(AnalysisButtonText)); OnPropertyChanged(nameof(HasAnalysis)); } } }
     public bool HasAnalysis => EnvironmentRows.Count > 0; public string AnalysisButtonText => IsAnalyzing ? "Analyzing…" : "Refresh analysis";
     public string? ErrorMessage { get => errorMessage; private set { if (Set(ref errorMessage, value)) OnPropertyChanged(nameof(HasError)); } } public bool HasError => !string.IsNullOrWhiteSpace(ErrorMessage);

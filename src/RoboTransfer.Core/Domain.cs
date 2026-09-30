@@ -17,6 +17,11 @@ public enum CloudContentState { LocallyAvailable, Pinned, OnlineOnly, PartiallyA
 public enum ConflictPolicy { Skip, ReplaceIfSourceNewer, KeepBoth, Replace, ManualDecision }
 public enum ErrorCategory { AccessDenied, FileLocked, InvalidPath, InsufficientSpace, StorageDisconnected, DestinationChanged, ToolUnavailable, PolicyForbidden, CloudContentUnavailable, PathTooLong, DestinationConflict, VerificationMismatch, VerificationFailed, ProcessFailure, ConfigurationInvalid, Cancelled, Unknown }
 public enum ProfileClassification { InteractiveUser, Special, Service, Temporary, Stale, Unknown }
+public enum ExecutableTrustStatus { Trusted, NotTrusted, Unavailable, InvalidLocation, InvalidIdentity }
+public sealed record ExecutableTrustResult(ExecutableTrustStatus Status, string? CanonicalPath, string? Version, string? Publisher, string Explanation)
+{
+    public bool IsAuthorized => Status == ExecutableTrustStatus.Trusted;
+}
 
 public sealed record MigrationSource(string MachineName, string? ProfileId);
 public sealed record MigrationDestination(MigrationRoute Route, string Location, long? AvailableBytes);

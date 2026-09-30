@@ -6,9 +6,6 @@
     <ApplicationManifest>app.manifest</ApplicationManifest>
     <AssemblyName>RoboTransfer</AssemblyName>
     <RootNamespace>RoboTransfer.App</RootNamespace>
-    <Product>RoboTransfer</Product>
-    <Company>RoboTransfer</Company>
-    <Version>0.1.0</Version>
     <RuntimeIdentifiers>win-x64</RuntimeIdentifiers>
     <PublishSingleFile>false</PublishSingleFile>
     <SelfContained>false</SelfContained>
