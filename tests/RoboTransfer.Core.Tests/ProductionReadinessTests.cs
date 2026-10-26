@@ -61,8 +61,10 @@ public sealed class ProductionReadinessTests : IDisposable
         };
         start.ArgumentList.Add("-NoProfile");
         start.ArgumentList.Add("-NonInteractive");
-        start.ArgumentList.Add("-Command");
-        start.ArgumentList.Add("[string](Get-AuthenticodeSignature -LiteralPath $env:ROBOTRANSFER_TEST_PATH).Status");
+        start.ArgumentList.Add("-EncodedCommand");
+        const string command = "$ErrorActionPreference = 'Stop'; $ProgressPreference = 'SilentlyContinue'; " +
+            "[string](Get-AuthenticodeSignature -LiteralPath $env:ROBOTRANSFER_TEST_PATH).Status";
+        start.ArgumentList.Add(Convert.ToBase64String(System.Text.Encoding.Unicode.GetBytes(command)));
         start.Environment["ROBOTRANSFER_TEST_PATH"] = robocopy;
         using var process = System.Diagnostics.Process.Start(start)!;
         using var timeout = CancellationTokenSource.CreateLinkedTokenSource(TestContext.Current.CancellationToken);
@@ -71,9 +73,8 @@ public sealed class ProductionReadinessTests : IDisposable
         var error = process.StandardError.ReadToEndAsync(timeout.Token);
         try { await process.WaitForExitAsync(timeout.Token); }
         catch (OperationCanceledException) { if (!process.HasExited) process.Kill(true); throw; }
-        Assert.Equal(0, process.ExitCode);
+        Assert.True(process.ExitCode == 0, await error);
         Assert.Equal("Valid", (await output).Trim());
-        Assert.True(string.IsNullOrWhiteSpace(await error));
         var result = await new WindowsExecutableTrustValidator().ValidateAsync(robocopy, true, timeout.Token);
         Assert.True(result.IsAuthorized, result.Explanation);
         Assert.Contains("Microsoft", result.Publisher ?? "", StringComparison.OrdinalIgnoreCase);

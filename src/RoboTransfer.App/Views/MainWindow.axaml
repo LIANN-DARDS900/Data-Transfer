@@ -36,7 +36,7 @@
       </ItemsControl.ItemTemplate>
     </ItemsControl>
 
-    <ScrollViewer Grid.Row="2" HorizontalScrollBarVisibility="Disabled">
+    <ScrollViewer x:Name="PageScroll" Grid.Row="2" HorizontalScrollBarVisibility="Disabled">
       <Grid Margin="32,22,32,28" MaxWidth="920" HorizontalAlignment="Stretch">
         <!-- Choose this PC's role. Direct receiving remains visibly unavailable. -->
         <StackPanel IsVisible="{Binding IsWelcomePage}" Spacing="24">
