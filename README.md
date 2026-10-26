@@ -16,6 +16,14 @@ Windows CI validates restore, Release build, automated tests, and dependency vul
 
 See [Release Candidate checklist](docs/qualification/Release-Candidate-Checklist.md) for the remaining gates.
 
+## Guided migration UI
+
+The native Avalonia wizard follows a Smart Switch-inspired flow with old/new PC role cards, folder selection, review, real file/byte progress, verification and a final report. Direct receiving remains unavailable in this qualification build.
+
+![RoboTransfer native wizard](docs/ui/welcome.png)
+
+See [UI behavior and native previews](docs/ui/Smart-Switch-Wizard.md).
+
 ## Implemented capabilities
 
 ### Environment and planning

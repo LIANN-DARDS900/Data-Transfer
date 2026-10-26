@@ -139,9 +139,11 @@ public sealed class WindowsExecutableTrustValidator : IExecutableTrustValidator
         var outputTask = process.StandardOutput.ReadToEndAsync();
         var errorTask = process.StandardError.ReadToEndAsync();
 
+        using var timeout = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+        timeout.CancelAfter(TimeSpan.FromSeconds(20));
         try
         {
-            await process.WaitForExitAsync(cancellationToken);
+            await process.WaitForExitAsync(timeout.Token);
         }
         catch (OperationCanceledException)
         {
@@ -154,7 +156,8 @@ public sealed class WindowsExecutableTrustValidator : IExecutableTrustValidator
             {
             }
 
-            throw;
+            cancellationToken.ThrowIfCancellationRequested();
+            return new WindowsAuthenticodeResult(false, false, null, "Windows Authenticode validation timed out after 20 seconds. Retry the analysis or review endpoint logs.");
         }
 
         var output = await outputTask;
