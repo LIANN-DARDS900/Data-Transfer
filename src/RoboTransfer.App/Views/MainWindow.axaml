@@ -2,479 +2,227 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:vm="using:RoboTransfer.App.ViewModels"
         xmlns:core="using:RoboTransfer.Core"
+        xmlns:views="using:RoboTransfer.App.Views"
         x:Class="RoboTransfer.App.Views.MainWindow"
         x:DataType="vm:MainWindowViewModel"
-        Title="RoboTransfer"
-        Width="1080"
-        Height="760"
-        MinWidth="900"
-        MinHeight="650">
-
-  <Grid RowDefinitions="72,*">
-    <Border Background="{StaticResource NavyBrush}">
-      <Grid Margin="26,0" ColumnDefinitions="190,*,220" VerticalAlignment="Center">
-        <StackPanel Orientation="Horizontal" Spacing="12" VerticalAlignment="Center">
-          <Button Classes="secondary"
-                  Content="← Back"
-                  Command="{Binding BackCommand}"
-                  IsVisible="{Binding ShowBack}"
-                  Padding="14,8"
-                  MinHeight="36"/>
-          <StackPanel IsVisible="{Binding !ShowBack}">
-            <TextBlock Text="RoboTransfer" Foreground="White" FontSize="22" FontWeight="SemiBold"/>
-            <TextBlock Text="PC Migration" Foreground="#BFD0DC" FontSize="11"/>
+        Title="RoboTransfer" Width="1080" Height="820" MinWidth="900" MinHeight="650">
+  <Grid RowDefinitions="76,Auto,*,40">
+    <Border Background="White" BorderBrush="{StaticResource BorderBrush}" BorderThickness="0,0,0,1">
+      <Grid Margin="28,0" ColumnDefinitions="*,Auto" VerticalAlignment="Center">
+        <StackPanel Orientation="Horizontal" Spacing="12">
+          <Border Width="38" Height="38" CornerRadius="12" Background="{StaticResource AccentBrush}">
+            <TextBlock Text="⇄" Foreground="White" FontSize="25" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+          </Border>
+          <StackPanel VerticalAlignment="Center">
+            <TextBlock Text="RoboTransfer" FontSize="20" FontWeight="SemiBold"/>
+            <TextBlock Text="A fresh PC. Everything you need." Classes="caption"/>
           </StackPanel>
         </StackPanel>
-
-        <StackPanel Grid.Column="1" HorizontalAlignment="Center" VerticalAlignment="Center">
-          <TextBlock Text="{Binding StepLabel}" Foreground="#AFC6D8" FontSize="11" FontWeight="SemiBold" HorizontalAlignment="Center"/>
-          <TextBlock Text="{Binding RoleTitle}" Foreground="White" FontSize="15" FontWeight="SemiBold" HorizontalAlignment="Center" IsVisible="{Binding ShowBack}"/>
-        </StackPanel>
-
-        <StackPanel Grid.Column="2" HorizontalAlignment="Right">
-          <TextBlock Text="QUALIFICATION BUILD" Foreground="#D9E8F0" FontSize="10" FontWeight="SemiBold" HorizontalAlignment="Right"/>
-          <TextBlock Text="{Binding ApplicationVersion}" Foreground="#8FAABD" FontSize="9" MaxWidth="210" TextTrimming="CharacterEllipsis"/>
-        </StackPanel>
+        <Border Grid.Column="1" Classes="badge"><TextBlock Text="QUALIFICATION BUILD" FontSize="10" FontWeight="SemiBold"/></Border>
       </Grid>
     </Border>
 
-    <ScrollViewer Grid.Row="1">
-      <Grid Margin="34,30,34,36" MaxWidth="980" HorizontalAlignment="Center">
-
-        <!-- START -->
-        <StackPanel IsVisible="{Binding IsWelcomePage}" Spacing="22">
-          <StackPanel HorizontalAlignment="Center" MaxWidth="720">
-            <TextBlock Classes="h1" Text="Move your work. Keep it simple." HorizontalAlignment="Center"/>
-            <TextBlock Text="Choose what this PC is doing. RoboTransfer will guide you one step at a time."
-                       Foreground="{StaticResource MutedBrush}"
-                       FontSize="16"
-                       TextAlignment="Center"
-                       TextWrapping="Wrap"
-                       Margin="0,8,0,0"/>
+    <ItemsControl Grid.Row="1" ItemsSource="{Binding Steps}" IsVisible="{Binding ShowBack}" Margin="24,20,24,4" HorizontalAlignment="Center">
+      <ItemsControl.ItemsPanel><ItemsPanelTemplate><StackPanel Orientation="Horizontal" Spacing="26"/></ItemsPanelTemplate></ItemsControl.ItemsPanel>
+      <ItemsControl.ItemTemplate>
+        <DataTemplate x:DataType="vm:WorkflowStep">
+          <StackPanel Width="92" Spacing="6">
+            <Border Classes="step" Classes.current="{Binding IsCurrent}" Classes.complete="{Binding IsComplete}" HorizontalAlignment="Center">
+              <TextBlock Text="{Binding Number}" HorizontalAlignment="Center" VerticalAlignment="Center" FontWeight="SemiBold"/>
+            </Border>
+            <TextBlock Text="{Binding Name}" HorizontalAlignment="Center" FontSize="12"/>
           </StackPanel>
+        </DataTemplate>
+      </ItemsControl.ItemTemplate>
+    </ItemsControl>
 
-          <Grid ColumnDefinitions="*,18,*" Margin="0,16,0,0">
-            <Button Classes="choice" Command="{Binding SelectSenderCommand}">
-              <Grid RowDefinitions="Auto,*,Auto">
-                <Border Width="58" Height="58" CornerRadius="29" Background="{StaticResource AccentSoftBrush}">
-                  <TextBlock Text="↑" FontSize="30" Foreground="{StaticResource AccentBrush}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                </Border>
-                <StackPanel Grid.Row="1" Margin="0,18,0,0">
-                  <TextBlock Text="Send from this PC" FontSize="23" FontWeight="SemiBold"/>
-                  <TextBlock Text="Move the employee’s selected files to an approved destination."
-                             Foreground="{StaticResource MutedBrush}"
-                             TextWrapping="Wrap"
-                             Margin="0,7,0,0"/>
-                </StackPanel>
-                <TextBlock Grid.Row="2" Text="Available now  →" Foreground="{StaticResource AccentBrush}" FontWeight="SemiBold" Margin="0,18,0,0"/>
-              </Grid>
+    <ScrollViewer x:Name="PageScroll" Grid.Row="2" HorizontalScrollBarVisibility="Disabled">
+      <Grid Margin="32,22,32,28" MaxWidth="920" HorizontalAlignment="Stretch">
+        <!-- Choose this PC's role. Direct receiving remains visibly unavailable. -->
+        <StackPanel IsVisible="{Binding IsWelcomePage}" Spacing="24">
+          <views:PcTransferIllustration Width="430" Height="165" HorizontalAlignment="Center"/>
+          <StackPanel Spacing="8" HorizontalAlignment="Center" MaxWidth="700">
+            <TextBlock Classes="h1" Text="Your work, ready for its next home." TextAlignment="Center" TextWrapping="Wrap"/>
+            <TextBlock Classes="subtitle" Text="Move your files to a new PC. We’ll guide you through it." TextAlignment="Center"/>
+          </StackPanel>
+          <Grid ColumnDefinitions="*,20,*">
+            <Button Classes="choice" Command="{Binding SelectSenderCommand}" AutomationProperties.AutomationId="ChooseOldPc">
+              <StackPanel Spacing="12">
+                <Border Width="52" Height="52" CornerRadius="26" Background="{StaticResource AccentSoftBrush}" HorizontalAlignment="Left"><TextBlock Text="↑" FontSize="28" Foreground="{StaticResource AccentBrush}" HorizontalAlignment="Center" VerticalAlignment="Center"/></Border>
+                <TextBlock Text="This is my old PC" FontSize="23" FontWeight="SemiBold"/>
+                <TextBlock Classes="subtitle" Text="Choose the files you want to send to an approved drive or network share."/>
+                <TextBlock Text="Send my files  →" Foreground="{StaticResource AccentBrush}" FontWeight="SemiBold" Margin="0,8,0,0"/>
+              </StackPanel>
             </Button>
-
-            <Button Grid.Column="2" Classes="choice" Command="{Binding SelectReceiverCommand}" IsEnabled="{Binding ReceiverAvailable}">
-              <Grid RowDefinitions="Auto,*,Auto">
-                <Border Width="58" Height="58" CornerRadius="29" Background="#EEF1F4">
-                  <TextBlock Text="↓" FontSize="30" Foreground="{StaticResource MutedBrush}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                </Border>
-                <StackPanel Grid.Row="1" Margin="0,18,0,0">
-                  <TextBlock Text="Receive on this PC" FontSize="23" FontWeight="SemiBold"/>
-                  <TextBlock Text="Direct PC-to-PC receive will appear here when that route is qualified."
-                             Foreground="{StaticResource MutedBrush}"
-                             TextWrapping="Wrap"
-                             Margin="0,7,0,0"/>
-                </StackPanel>
-                <TextBlock Grid.Row="2" Text="Not enabled in this build" Foreground="{StaticResource MutedBrush}" Margin="0,18,0,0"/>
-              </Grid>
-            </Button>
+            <Border Grid.Column="2" Classes="card" Background="#F0F3F7" Padding="28">
+              <StackPanel Spacing="12">
+                <Border Width="52" Height="52" CornerRadius="26" Background="#E3E9F0" HorizontalAlignment="Left"><TextBlock Text="↓" FontSize="28" Foreground="{StaticResource MutedBrush}" HorizontalAlignment="Center" VerticalAlignment="Center"/></Border>
+                <TextBlock Text="This is my new PC" FontSize="23" FontWeight="SemiBold"/>
+                <TextBlock Classes="subtitle" Text="Direct PC-to-PC receiving is not available in this build."/>
+                <TextBlock Text="Coming later" Classes="caption" Margin="0,8,0,0"/>
+              </StackPanel>
+            </Border>
           </Grid>
-
-          <Border Classes="soft" MaxWidth="720" HorizontalAlignment="Center" Margin="0,12,0,0">
-            <TextBlock Text="RoboTransfer preserves the source, skips unsupported cloud-only data, and verifies transferred files before the job is considered complete."
-                       TextWrapping="Wrap"
-                       TextAlignment="Center"
-                       Foreground="{StaticResource MutedBrush}"/>
-          </Border>
+          <TextBlock Classes="caption" Text="Your source files stay on the old PC. Copied files are verified separately." TextAlignment="Center" TextWrapping="Wrap"/>
         </StackPanel>
 
-        <!-- SETUP -->
         <StackPanel IsVisible="{Binding IsSetupPage}" Spacing="18">
-          <StackPanel>
-            <TextBlock Classes="h1" Text="Set up this transfer"/>
-            <TextBlock Text="Analyze the PC, choose the employee profile, then choose an approved destination."
-                       Foreground="{StaticResource MutedBrush}"
-                       FontSize="15"
-                       Margin="0,6,0,0"/>
-          </StackPanel>
-
+          <StackPanel Spacing="7"><TextBlock Classes="h1" Text="Let’s get connected"/><TextBlock Classes="subtitle" Text="Check this PC, choose the employee, then choose where to send the files."/></StackPanel>
           <Border Classes="card">
-            <Grid ColumnDefinitions="*,Auto">
-              <StackPanel>
-                <TextBlock Classes="h2" Text="1. Analyze this PC"/>
-                <TextBlock Text="{Binding PolicySummary}" Foreground="{StaticResource MutedBrush}" Margin="0,4,0,0"/>
-              </StackPanel>
-              <Button Grid.Column="1"
-                      Classes="primary"
-                      Content="{Binding AnalysisButtonText}"
-                      Command="{Binding RefreshCommand}"
-                      IsEnabled="{Binding !IsAnalyzing}"/>
+            <Grid ColumnDefinitions="*,Auto" ColumnSpacing="20">
+              <StackPanel Spacing="5"><TextBlock Classes="h2" Text="Check this PC"/><TextBlock Classes="caption" Text="{Binding PolicySummary}"/></StackPanel>
+              <Button Grid.Column="1" Classes="primary" Content="{Binding AnalysisButtonText}" Command="{Binding RefreshCommand}" IsEnabled="{Binding !IsAnalyzing}"/>
             </Grid>
           </Border>
-
-          <Border Classes="card" IsVisible="{Binding HasError}" BorderBrush="{StaticResource WarningBrush}">
-            <StackPanel>
-              <TextBlock Text="Policy needs attention" FontWeight="SemiBold" Foreground="{StaticResource WarningBrush}"/>
-              <TextBlock Text="{Binding ErrorMessage}" TextWrapping="Wrap" Foreground="{StaticResource MutedBrush}" Margin="0,5,0,0"/>
-            </StackPanel>
-          </Border>
-
-          <ItemsControl ItemsSource="{Binding EnvironmentRows}" IsVisible="{Binding HasAnalysis}">
-            <ItemsControl.ItemsPanel>
-              <ItemsPanelTemplate>
-                <StackPanel/>
-              </ItemsPanelTemplate>
-            </ItemsControl.ItemsPanel>
-            <ItemsControl.ItemTemplate>
-              <DataTemplate x:DataType="vm:EnvironmentRow">
-                <Border Classes="card" Padding="18" Margin="0,0,0,10">
-                  <Grid ColumnDefinitions="170,*,Auto">
-                    <TextBlock Text="{Binding Label}" FontWeight="SemiBold" VerticalAlignment="Center"/>
-                    <StackPanel Grid.Column="1">
-                      <TextBlock Text="{Binding Value}" FontWeight="SemiBold"/>
-                      <TextBlock Text="{Binding Detail}" Foreground="{StaticResource MutedBrush}" FontSize="12" TextWrapping="Wrap"/>
-                    </StackPanel>
-                    <Border Grid.Column="2"
-                            Classes="badge"
-                            Classes.available="{Binding IsAvailable}"
-                            Classes.warning="{Binding IsWarning}"
-                            Classes.blocked="{Binding IsBlocked}"
-                            VerticalAlignment="Center">
-                      <TextBlock Text="{Binding Value}" FontSize="10" FontWeight="SemiBold"/>
-                    </Border>
-                  </Grid>
-                </Border>
-              </DataTemplate>
-            </ItemsControl.ItemTemplate>
-          </ItemsControl>
-
+          <ProgressBar IsVisible="{Binding IsAnalyzing}" IsIndeterminate="True" Height="6"/>
+          <Border Classes="soft" IsVisible="{Binding HasError}"><StackPanel Spacing="6"><TextBlock Text="Setup needs attention" Foreground="{StaticResource WarningBrush}" FontWeight="SemiBold"/><TextBlock Text="{Binding ErrorMessage}" TextWrapping="Wrap"/></StackPanel></Border>
           <Border Classes="card" IsVisible="{Binding HasAnalysis}">
-            <StackPanel Spacing="12">
-              <TextBlock Classes="h2" Text="2. Choose the employee"/>
-              <ComboBox ItemsSource="{Binding Profiles}"
-                        SelectedItem="{Binding SelectedProfile}"
-                        PlaceholderText="Select a registered Windows profile"
-                        MinHeight="46">
-                <ComboBox.ItemTemplate>
-                  <DataTemplate x:DataType="core:UserProfile">
-                    <TextBlock Text="{Binding DisplayName}"/>
-                  </DataTemplate>
-                </ComboBox.ItemTemplate>
+            <StackPanel Spacing="14">
+              <TextBlock Classes="h2" Text="Whose files are we moving?"/>
+              <ComboBox ItemsSource="{Binding Profiles}" SelectedItem="{Binding SelectedProfile}" PlaceholderText="Choose an employee profile" HorizontalAlignment="Stretch" MinHeight="46">
+                <ComboBox.ItemTemplate><DataTemplate x:DataType="core:UserProfile"><TextBlock Text="{Binding DisplayName}"/></DataTemplate></ComboBox.ItemTemplate>
               </ComboBox>
-              <TextBlock Text="{Binding ProfileDetail}" Foreground="{StaticResource MutedBrush}"/>
-            </StackPanel>
-          </Border>
-
-          <Border Classes="card" IsVisible="{Binding HasAnalysis}">
-            <StackPanel Spacing="12">
-              <StackPanel>
-                <TextBlock Classes="h2" Text="3. Choose how to move it"/>
-                <TextBlock Text="Only destinations allowed by the current policy appear here."
-                           Foreground="{StaticResource MutedBrush}"
-                           Margin="0,4,0,0"/>
-              </StackPanel>
-
-              <ListBox Classes="wizardOptions"
-                       ItemsSource="{Binding Operations.Destinations}"
-                       SelectedItem="{Binding Operations.SelectedDestination}">
+              <TextBlock Classes="caption" Text="{Binding ProfileDetail}"/>
+              <TextBlock Classes="h2" Text="How do you want to move them?" Margin="0,8,0,0"/>
+              <ListBox Classes="wizardOptions" ItemsSource="{Binding Operations.Destinations}" SelectedItem="{Binding Operations.SelectedDestination}">
                 <ListBox.ItemTemplate>
                   <DataTemplate x:DataType="vm:DestinationOption">
-                    <Grid ColumnDefinitions="Auto,*" ColumnSpacing="14">
-                      <Border Width="42" Height="42" CornerRadius="21" Background="{StaticResource AccentSoftBrush}">
-                        <TextBlock Text="→" Foreground="{StaticResource AccentBrush}" FontSize="22" HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                      </Border>
-                      <StackPanel Grid.Column="1" VerticalAlignment="Center">
-                        <TextBlock Text="{Binding Display}" FontWeight="SemiBold" FontSize="15"/>
-                        <TextBlock Text="{Binding Destination.Route}" Foreground="{StaticResource MutedBrush}" FontSize="12"/>
-                      </StackPanel>
+                    <Grid ColumnDefinitions="48,*" ColumnSpacing="12">
+                      <Border Width="42" Height="42" CornerRadius="14" Background="{StaticResource AccentSoftBrush}"><TextBlock Text="→" FontSize="24" Foreground="{StaticResource AccentBrush}" HorizontalAlignment="Center" VerticalAlignment="Center"/></Border>
+                      <StackPanel Grid.Column="1" Spacing="3"><TextBlock Text="{Binding RouteLabel}" FontWeight="SemiBold"/><TextBlock Text="{Binding Display}" Classes="caption" TextWrapping="Wrap"/></StackPanel>
                     </Grid>
                   </DataTemplate>
                 </ListBox.ItemTemplate>
               </ListBox>
-
-              <Border Classes="soft" IsVisible="{Binding !CanContinueFromSetup}">
-                <TextBlock Text="{Binding Recommendation}" TextWrapping="Wrap" Foreground="{StaticResource MutedBrush}"/>
-              </Border>
+              <TextBlock IsVisible="{Binding !CanContinueFromSetup}" Text="{Binding Recommendation}" Classes="subtitle"/>
             </StackPanel>
           </Border>
-
-          <Grid ColumnDefinitions="*,Auto">
-            <TextBlock Text="Nothing is transferred during setup." Foreground="{StaticResource MutedBrush}" VerticalAlignment="Center"/>
-            <Button Grid.Column="1"
-                    Classes="primary"
-                    Content="Continue"
-                    Command="{Binding ContinueCommand}"
-                    IsEnabled="{Binding CanContinueFromSetup}"/>
-          </Grid>
+          <Expander Header="Technical checks" IsVisible="{Binding HasAnalysis}" HorizontalAlignment="Stretch">
+            <ItemsControl ItemsSource="{Binding EnvironmentRows}">
+              <ItemsControl.ItemTemplate>
+                <DataTemplate x:DataType="vm:EnvironmentRow">
+                  <Border Classes="card" Padding="16" Margin="0,8,0,0">
+                    <StackPanel Spacing="6">
+                      <Grid ColumnDefinitions="*,Auto"><TextBlock Text="{Binding Label}" FontWeight="SemiBold"/><Border Grid.Column="1" Classes="badge" Classes.available="{Binding IsAvailable}" Classes.warning="{Binding IsWarning}" Classes.blocked="{Binding IsBlocked}"><TextBlock Text="{Binding Value}" FontSize="11" MaxWidth="520" TextTrimming="CharacterEllipsis"/></Border></Grid>
+                      <TextBlock Text="{Binding Detail}" Classes="caption" TextWrapping="Wrap"/>
+                    </StackPanel>
+                  </Border>
+                </DataTemplate>
+              </ItemsControl.ItemTemplate>
+            </ItemsControl>
+          </Expander>
+          <Expander Header="Resume an unfinished migration" IsVisible="{Binding Operations.HasRecovery}" HorizontalAlignment="Stretch">
+            <StackPanel Spacing="10" Margin="0,12,0,0">
+              <ComboBox ItemsSource="{Binding Operations.RecoverableSessions}" SelectedItem="{Binding Operations.SelectedRecovery}" HorizontalAlignment="Stretch">
+                <ComboBox.ItemTemplate><DataTemplate x:DataType="core:MigrationSession"><TextBlock Text="{Binding Id}"/></DataTemplate></ComboBox.ItemTemplate>
+              </ComboBox>
+              <TextBlock Text="Analyze this PC and select the matching profile and destination first." Classes="subtitle"/>
+              <StackPanel Orientation="Horizontal" Spacing="10"><Button Classes="secondary" Content="Validate and resume" Command="{Binding Operations.ResumeCommand}"/><Button Classes="secondary" Content="Abandon session" Command="{Binding Operations.AbandonCommand}"/></StackPanel>
+              <TextBlock Text="{Binding Operations.Status}" Classes="subtitle"/>
+            </StackPanel>
+          </Expander>
+          <Button Classes="primary" Content="Next: choose files  →" Command="{Binding ContinueCommand}" IsEnabled="{Binding CanContinueFromSetup}" HorizontalAlignment="Right"/>
         </StackPanel>
 
-        <!-- DATA -->
         <StackPanel IsVisible="{Binding IsDataPage}" Spacing="18">
-          <StackPanel>
-            <TextBlock Classes="h1" Text="Choose what to move"/>
-            <TextBlock Text="{Binding Operations.SourceSummary}" Foreground="{StaticResource MutedBrush}" FontSize="15" Margin="0,6,0,0"/>
-          </StackPanel>
-
+          <StackPanel Spacing="7"><TextBlock Classes="h1" Text="What would you like to bring?"/><TextBlock Classes="subtitle" Text="{Binding Operations.SourceSummary}"/></StackPanel>
           <Border Classes="card">
-            <StackPanel Spacing="14">
-              <Grid ColumnDefinitions="*,Auto">
-                <StackPanel>
-                  <TextBlock Classes="h2" Text="Folders"/>
-                  <TextBlock Text="Select the Windows Known Folders to include." Foreground="{StaticResource MutedBrush}"/>
-                </StackPanel>
-                <Border Grid.Column="1" Classes="badge"><TextBlock Text="SOURCE PRESERVED" FontSize="10" FontWeight="SemiBold"/></Border>
+            <StackPanel Spacing="12">
+              <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12">
+                <TextBlock Text="{Binding Operations.SelectionSummary}" FontWeight="SemiBold" VerticalAlignment="Center"/>
+                <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8" IsEnabled="{Binding Operations.CanEditSelection}"><Button Classes="secondary" Content="Select all" Command="{Binding Operations.SelectAllCommand}" Padding="12,6" MinHeight="34"/><Button Classes="secondary" Content="Clear" Command="{Binding Operations.SelectNoneCommand}" Padding="12,6" MinHeight="34"/></StackPanel>
               </Grid>
-
-              <ItemsControl ItemsSource="{Binding Operations.Folders}">
+              <ItemsControl ItemsSource="{Binding Operations.Folders}" IsEnabled="{Binding Operations.CanEditSelection}">
                 <ItemsControl.ItemTemplate>
                   <DataTemplate x:DataType="vm:KnownFolderSelection">
-                    <Border BorderBrush="{StaticResource BorderBrush}" BorderThickness="0,0,0,1" Padding="4,11">
-                      <Grid ColumnDefinitions="Auto,180,*">
-                        <CheckBox IsChecked="{Binding IsSelected}" IsEnabled="{Binding IsEligible}" VerticalAlignment="Center"/>
-                        <TextBlock Grid.Column="1" Text="{Binding Folder.Kind}" FontWeight="SemiBold" Margin="12,0,0,0"/>
-                        <TextBlock Grid.Column="2" Text="{Binding Status}" Foreground="{StaticResource MutedBrush}"/>
-                      </Grid>
+                    <Border BorderBrush="{StaticResource BorderBrush}" BorderThickness="0,0,0,1" Padding="0,10">
+                      <CheckBox IsChecked="{Binding IsSelected}" IsEnabled="{Binding IsEligible}" HorizontalContentAlignment="Stretch" HorizontalAlignment="Stretch">
+                        <Grid ColumnDefinitions="46,*,Auto" ColumnSpacing="12">
+                          <Border Width="40" Height="40" CornerRadius="12" Background="{StaticResource AccentSoftBrush}"><TextBlock Text="{Binding Icon}" FontSize="24" Foreground="{StaticResource AccentBrush}" HorizontalAlignment="Center" VerticalAlignment="Center"/></Border>
+                          <StackPanel Grid.Column="1" Spacing="3"><TextBlock Text="{Binding Name}" FontWeight="SemiBold"/><TextBlock Text="{Binding Description}" Classes="caption"/></StackPanel>
+                          <TextBlock Grid.Column="2" Text="{Binding Status}" Classes="caption" VerticalAlignment="Center"/>
+                        </Grid>
+                      </CheckBox>
                     </Border>
                   </DataTemplate>
                 </ItemsControl.ItemTemplate>
               </ItemsControl>
             </StackPanel>
           </Border>
-
-          <Border Classes="card">
-            <StackPanel Spacing="14">
-              <Grid ColumnDefinitions="*,Auto">
-                <StackPanel>
-                  <TextBlock Classes="h2" Text="Scan"/>
-                  <TextBlock Text="RoboTransfer inventories only the selected folders before anything is copied."
-                             Foreground="{StaticResource MutedBrush}"/>
-                </StackPanel>
-                <Border Grid.Column="1" Classes="badge"><TextBlock Text="{Binding Operations.Stage}" FontSize="10" FontWeight="SemiBold"/></Border>
-              </Grid>
-
-              <Grid ColumnDefinitions="*,*,*,*" Margin="0,6,0,0">
-                <StackPanel><TextBlock Classes="caption" Text="FILES"/><TextBlock Text="{Binding Operations.Files}" FontSize="21" FontWeight="SemiBold"/></StackPanel>
-                <StackPanel Grid.Column="1"><TextBlock Classes="caption" Text="DATA"/><TextBlock Text="{Binding Operations.BytesText}" FontSize="21" FontWeight="SemiBold"/></StackPanel>
-                <StackPanel Grid.Column="2"><TextBlock Classes="caption" Text="SKIPPED"/><TextBlock Text="{Binding Operations.Skipped}" FontSize="21" FontWeight="SemiBold"/></StackPanel>
-                <StackPanel Grid.Column="3"><TextBlock Classes="caption" Text="WARNINGS"/><TextBlock Text="{Binding Operations.Warnings}" FontSize="21" FontWeight="SemiBold"/></StackPanel>
-              </Grid>
-
-              <ProgressBar IsIndeterminate="{Binding Operations.IsBusy}" Height="8"/>
-              <TextBlock Text="{Binding Operations.Status}" TextWrapping="Wrap" Foreground="{StaticResource MutedBrush}"/>
-
-              <StackPanel Orientation="Horizontal" Spacing="10">
-                <Button Classes="primary" Content="Scan selected folders" Command="{Binding Operations.StartScanCommand}" IsEnabled="{Binding Operations.CanScan}"/>
-                <Button Classes="secondary" Content="Cancel" Command="{Binding Operations.CancelCommand}" IsEnabled="{Binding Operations.IsBusy}"/>
-              </StackPanel>
-            </StackPanel>
-          </Border>
-
-          <Grid ColumnDefinitions="*,Auto">
-            <TextBlock Text="Cloud-only or unavailable data stays untouched and is reported as skipped."
-                       Foreground="{StaticResource MutedBrush}"
-                       TextWrapping="Wrap"
-                       MaxWidth="600"/>
-            <Button Grid.Column="1"
-                    Classes="primary"
-                    Content="Review transfer"
-                    Command="{Binding ContinueCommand}"
-                    IsEnabled="{Binding CanContinueToReview}"/>
-          </Grid>
+          <Border Classes="soft"><StackPanel Spacing="8"><ProgressBar IsVisible="{Binding Operations.IsBusy}" IsIndeterminate="True" Height="6"/><TextBlock Text="{Binding Operations.Status}" TextWrapping="Wrap"/><TextBlock Classes="caption" Text="Cloud-only files, unavailable items and OST caches are excluded and reported."/></StackPanel></Border>
+          <Grid ColumnDefinitions="*,Auto"><TextBlock Text="Nothing is copied during the scan." Classes="caption" VerticalAlignment="Center"/><StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="10"><Button Classes="secondary" Content="Cancel scan" Command="{Binding Operations.CancelCommand}" IsVisible="{Binding Operations.IsBusy}"/><Button Classes="primary" Content="Scan and review  →" Command="{Binding Operations.StartScanCommand}" IsEnabled="{Binding Operations.CanScan}"/></StackPanel></Grid>
         </StackPanel>
 
-        <!-- REVIEW -->
         <StackPanel IsVisible="{Binding IsReviewPage}" Spacing="18">
-          <StackPanel>
-            <TextBlock Classes="h1" Text="Review before transfer"/>
-            <TextBlock Text="One final check. Locking the plan freezes the source, destination and safety rules."
-                       Foreground="{StaticResource MutedBrush}"
-                       FontSize="15"
-                       Margin="0,6,0,0"/>
-          </StackPanel>
-
+          <StackPanel Spacing="7"><TextBlock Classes="h1" Text="Ready for the move?"/><TextBlock Classes="subtitle" Text="Check the details below. Nothing has been copied yet."/></StackPanel>
+          <views:PcTransferIllustration Width="330" Height="125" HorizontalAlignment="Center"/>
           <Border Classes="card">
-            <Grid ColumnDefinitions="160,*,160,*" RowDefinitions="Auto,Auto,Auto,Auto,Auto" RowSpacing="14">
-              <TextBlock Classes="caption" Text="SOURCE"/>
-              <TextBlock Grid.Column="1" Text="{Binding Operations.SourceSummary}" FontWeight="SemiBold"/>
-              <TextBlock Grid.Column="2" Classes="caption" Text="DESTINATION"/>
-              <TextBlock Grid.Column="3" Text="{Binding Operations.DestinationSummary}" FontWeight="SemiBold"/>
-
-              <TextBlock Grid.Row="1" Classes="caption" Text="FOLDERS"/>
-              <TextBlock Grid.Row="1" Grid.Column="1" Text="{Binding Operations.SelectedFoldersSummary}" TextWrapping="Wrap"/>
-              <TextBlock Grid.Row="1" Grid.Column="2" Classes="caption" Text="ROUTE"/>
-              <TextBlock Grid.Row="1" Grid.Column="3" Text="{Binding Operations.RouteSummary}"/>
-
-              <TextBlock Grid.Row="2" Classes="caption" Text="FILES"/>
-              <TextBlock Grid.Row="2" Grid.Column="1" Text="{Binding Operations.Files}"/>
-              <TextBlock Grid.Row="2" Grid.Column="2" Classes="caption" Text="DATA"/>
-              <TextBlock Grid.Row="2" Grid.Column="3" Text="{Binding Operations.BytesText}"/>
-
-              <TextBlock Grid.Row="3" Classes="caption" Text="CONFLICT SAFETY"/>
-              <TextBlock Grid.Row="3" Grid.Column="1" Text="{Binding Operations.ConflictSummary}"/>
-              <TextBlock Grid.Row="3" Grid.Column="2" Classes="caption" Text="VERIFICATION"/>
-              <TextBlock Grid.Row="3" Grid.Column="3" Text="{Binding Operations.VerificationSummary}"/>
-
-              <TextBlock Grid.Row="4" Classes="caption" Text="ROBOCOPY"/>
-              <TextBlock Grid.Row="4" Grid.Column="1" Text="{Binding Operations.RobocopySummary}"/>
-              <TextBlock Grid.Row="4" Grid.Column="2" Classes="caption" Text="CLOUD SKIPPED"/>
-              <TextBlock Grid.Row="4" Grid.Column="3" Text="{Binding Operations.Skipped}"/>
+            <Grid ColumnDefinitions="140,*" RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto" RowSpacing="15">
+              <TextBlock Classes="caption" Text="FROM"/><TextBlock Grid.Column="1" Text="{Binding Operations.SourceSummary}" FontWeight="SemiBold" TextWrapping="Wrap"/>
+              <TextBlock Grid.Row="1" Classes="caption" Text="TO"/><TextBlock Grid.Row="1" Grid.Column="1" Text="{Binding Operations.DestinationSummary}" FontWeight="SemiBold" TextWrapping="Wrap"/>
+              <TextBlock Grid.Row="2" Classes="caption" Text="BRINGING"/><TextBlock Grid.Row="2" Grid.Column="1" Text="{Binding Operations.SelectedFoldersSummary}" TextWrapping="Wrap"/>
+              <TextBlock Grid.Row="3" Classes="caption" Text="INVENTORY"/><StackPanel Grid.Row="3" Grid.Column="1" Orientation="Horizontal" Spacing="12"><TextBlock Text="{Binding Operations.Files, StringFormat='{}{0:N0} files'}"/><TextBlock Text="{Binding Operations.BytesText}"/><TextBlock Text="{Binding Operations.Skipped, StringFormat='{}{0:N0} excluded'}"/></StackPanel>
+              <TextBlock Grid.Row="4" Classes="caption" Text="EXISTING FILES"/><TextBlock Grid.Row="4" Grid.Column="1" Text="Keep both copies · source preserved"/>
+              <TextBlock Grid.Row="5" Classes="caption" Text="INTEGRITY CHECK"/><TextBlock Grid.Row="5" Grid.Column="1" Text="{Binding Operations.VerificationSummary}"/>
             </Grid>
           </Border>
-
-          <Border Classes="soft">
-            <TextBlock Text="KeepBoth preserves existing destination files. RoboTransfer never deletes or replaces source data."
-                       TextWrapping="Wrap"/>
-          </Border>
-
-          <Border Classes="card">
-            <Grid ColumnDefinitions="*,Auto">
-              <CheckBox Content="I reviewed the source, destination and transfer summary"
-                        IsChecked="{Binding Operations.ReviewConfirmed}"
-                        VerticalAlignment="Center"/>
-              <Button Grid.Column="1"
-                      Classes="primary"
-                      Content="Lock transfer plan"
-                      Command="{Binding Operations.LockPlanCommand}"
-                      IsEnabled="{Binding Operations.CanLockPlan}"/>
-            </Grid>
-          </Border>
-
-          <Grid ColumnDefinitions="*,Auto">
-            <TextBlock Text="{Binding Operations.Status}" Foreground="{StaticResource MutedBrush}" VerticalAlignment="Center"/>
-            <Button Grid.Column="1"
-                    Classes="primary"
-                    Content="Continue to transfer"
-                    Command="{Binding ContinueCommand}"
-                    IsEnabled="{Binding CanContinueToTransfer}"/>
-          </Grid>
+          <CheckBox Content="I checked the employee, destination and selected folders." IsChecked="{Binding Operations.ReviewConfirmed}"/>
+          <TextBlock Text="{Binding Operations.Status}" Classes="subtitle"/>
+          <Button Classes="primary" Content="Confirm transfer plan  →" Command="{Binding Operations.LockPlanCommand}" IsEnabled="{Binding Operations.CanLockPlan}" HorizontalAlignment="Right"/>
         </StackPanel>
 
-        <!-- TRANSFER -->
-        <StackPanel IsVisible="{Binding IsTransferPage}" Spacing="20">
-          <StackPanel HorizontalAlignment="Center">
-            <TextBlock Classes="h1" Text="Ready to transfer" HorizontalAlignment="Center"/>
-            <TextBlock Text="{Binding Operations.DestinationSummary}" Foreground="{StaticResource MutedBrush}" FontSize="15" Margin="0,6,0,0"/>
-          </StackPanel>
-
-          <Border Classes="card" Padding="32">
-            <StackPanel Spacing="20">
-              <Border Width="82" Height="82" CornerRadius="41" Background="{StaticResource AccentSoftBrush}" HorizontalAlignment="Center">
-                <TextBlock Text="→" FontSize="42" Foreground="{StaticResource AccentBrush}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
-              </Border>
-
-              <ProgressBar IsIndeterminate="{Binding Operations.IsBusy}" Height="12"/>
-
-              <Grid ColumnDefinitions="*,*,*,*" MaxWidth="700" HorizontalAlignment="Center">
-                <StackPanel HorizontalAlignment="Center"><TextBlock Classes="caption" Text="FILES"/><TextBlock Text="{Binding Operations.Files}" FontSize="24" FontWeight="SemiBold"/></StackPanel>
-                <StackPanel Grid.Column="1" HorizontalAlignment="Center"><TextBlock Classes="caption" Text="DATA"/><TextBlock Text="{Binding Operations.BytesText}" FontSize="24" FontWeight="SemiBold"/></StackPanel>
-                <StackPanel Grid.Column="2" HorizontalAlignment="Center"><TextBlock Classes="caption" Text="SKIPPED"/><TextBlock Text="{Binding Operations.Skipped}" FontSize="24" FontWeight="SemiBold"/></StackPanel>
-                <StackPanel Grid.Column="3" HorizontalAlignment="Center"><TextBlock Classes="caption" Text="FAILED"/><TextBlock Text="{Binding Operations.Failures}" FontSize="24" FontWeight="SemiBold"/></StackPanel>
-              </Grid>
-
-              <TextBlock Text="{Binding Operations.Status}" TextAlignment="Center" TextWrapping="Wrap" Foreground="{StaticResource MutedBrush}"/>
-
-              <StackPanel Orientation="Horizontal" Spacing="10" HorizontalAlignment="Center">
-                <Button Classes="primary" Content="Start transfer" Command="{Binding Operations.StartTransferCommand}" IsEnabled="{Binding Operations.CanTransfer}"/>
-                <Button Classes="secondary" Content="Cancel" Command="{Binding Operations.CancelCommand}" IsEnabled="{Binding Operations.IsBusy}"/>
-              </StackPanel>
-            </StackPanel>
-          </Border>
-
-          <Button Classes="primary"
-                  Content="Continue to verification"
-                  Command="{Binding ContinueCommand}"
-                  IsEnabled="{Binding CanContinueToVerification}"
-                  HorizontalAlignment="Right"/>
-        </StackPanel>
-
-        <!-- VERIFICATION -->
-        <StackPanel IsVisible="{Binding IsVerificationPage}" Spacing="20">
-          <StackPanel>
-            <TextBlock Classes="h1" Text="Verify the transfer"/>
-            <TextBlock Text="Transfer and verification are separate. RoboTransfer checks the copied data before completion."
-                       Foreground="{StaticResource MutedBrush}"
-                       FontSize="15"
-                       Margin="0,6,0,0"/>
-          </StackPanel>
-
+        <StackPanel IsVisible="{Binding IsTransferPage}" Spacing="22">
+          <StackPanel Spacing="8" HorizontalAlignment="Center"><TextBlock Classes="h1" Text="{Binding Operations.TransferTitle}" TextAlignment="Center"/><TextBlock Classes="subtitle" Text="Keep this PC awake and the destination connected." TextAlignment="Center"/></StackPanel>
+          <views:PcTransferIllustration Width="430" Height="165" HorizontalAlignment="Center"/>
           <Border Classes="card" Padding="30">
             <StackPanel Spacing="18">
-              <Grid ColumnDefinitions="*,Auto">
-                <TextBlock Classes="h2" Text="Integrity check"/>
-                <Border Grid.Column="1" Classes="badge available"><TextBlock Text="{Binding Operations.VerificationMode}" FontWeight="SemiBold"/></Border>
-              </Grid>
-
-              <ProgressBar IsIndeterminate="{Binding Operations.IsBusy}" Height="12"/>
-
-              <Grid ColumnDefinitions="*,*,*,*">
-                <StackPanel><TextBlock Classes="caption" Text="CHECKED DATA"/><TextBlock Text="{Binding Operations.BytesText}" FontSize="22" FontWeight="SemiBold"/></StackPanel>
-                <StackPanel Grid.Column="1"><TextBlock Classes="caption" Text="MISMATCHES"/><TextBlock Text="{Binding Operations.Mismatches}" FontSize="22" FontWeight="SemiBold"/></StackPanel>
-                <StackPanel Grid.Column="2"><TextBlock Classes="caption" Text="FAILED"/><TextBlock Text="{Binding Operations.Failures}" FontSize="22" FontWeight="SemiBold"/></StackPanel>
-                <StackPanel Grid.Column="3"><TextBlock Classes="caption" Text="SKIPPED"/><TextBlock Text="{Binding Operations.Skipped}" FontSize="22" FontWeight="SemiBold"/></StackPanel>
-              </Grid>
-
-              <TextBlock Text="{Binding Operations.Status}" TextWrapping="Wrap" Foreground="{StaticResource MutedBrush}"/>
-
-              <StackPanel Orientation="Horizontal" Spacing="10">
-                <Button Classes="primary" Content="Start verification" Command="{Binding Operations.StartVerificationCommand}" IsEnabled="{Binding Operations.CanVerify}"/>
-                <Button Classes="secondary" Content="Retry failed items" Command="{Binding Operations.RetryVerificationCommand}" IsEnabled="{Binding Operations.CanRetryVerification}"/>
-                <Button Classes="secondary" Content="Cancel" Command="{Binding Operations.CancelCommand}" IsEnabled="{Binding Operations.IsBusy}"/>
-              </StackPanel>
+              <TextBlock Text="{Binding Operations.ProgressText}" FontSize="54" FontWeight="SemiBold" Foreground="{StaticResource AccentBrush}" HorizontalAlignment="Center"/>
+              <ProgressBar Value="{Binding Operations.ProgressPercent}" IsIndeterminate="{Binding Operations.IsProgressIndeterminate}" Height="10" Minimum="0" Maximum="100" Foreground="{StaticResource AccentBrush}"/>
+              <TextBlock Text="{Binding Operations.ProgressDetail}" Classes="subtitle" TextAlignment="Center"/>
+              <Grid ColumnDefinitions="*,*,*"><StackPanel><TextBlock Classes="caption" Text="CURRENT FOLDER"/><TextBlock Text="{Binding Operations.CurrentFolder}"/></StackPanel><StackPanel Grid.Column="1"><TextBlock Classes="caption" Text="ELAPSED"/><TextBlock Text="{Binding Operations.ElapsedText}"/></StackPanel><StackPanel Grid.Column="2"><TextBlock Classes="caption" Text="FAILED"/><TextBlock Text="{Binding Operations.Failures}"/></StackPanel></Grid>
+              <TextBlock Text="{Binding Operations.Status}" Classes="subtitle" TextAlignment="Center"/>
+              <StackPanel Orientation="Horizontal" Spacing="12" HorizontalAlignment="Center"><Button Classes="primary" Content="Start transfer" Command="{Binding Operations.StartTransferCommand}" IsEnabled="{Binding Operations.CanTransfer}"/><Button Classes="secondary" Content="Cancel transfer" Command="{Binding Operations.CancelCommand}" IsVisible="{Binding Operations.IsBusy}"/></StackPanel>
             </StackPanel>
           </Border>
-
-          <Button Classes="primary"
-                  Content="Continue to report"
-                  Command="{Binding ContinueCommand}"
-                  IsEnabled="{Binding CanContinueToReport}"
-                  HorizontalAlignment="Right"/>
         </StackPanel>
 
-        <!-- REPORT -->
+        <StackPanel IsVisible="{Binding IsVerificationPage}" Spacing="22">
+          <StackPanel Spacing="7"><TextBlock Classes="h1" Text="Let’s check every copied file"/><TextBlock Classes="subtitle" Text="Copying is complete. Verify the files before considering the migration finished."/></StackPanel>
+          <Border Classes="card" Padding="30">
+            <StackPanel Spacing="20">
+              <Grid ColumnDefinitions="*,Auto"><TextBlock Classes="h2" Text="File integrity"/><Border Grid.Column="1" Classes="badge"><TextBlock Text="{Binding Operations.VerificationMode}"/></Border></Grid>
+              <ProgressBar Value="{Binding Operations.ProgressPercent}" IsIndeterminate="{Binding Operations.IsProgressIndeterminate}" Height="10" Foreground="{StaticResource AccentBrush}"/>
+              <TextBlock Text="{Binding Operations.ProgressDetail}" Classes="subtitle"/>
+              <Grid ColumnDefinitions="*,*,*"><StackPanel><TextBlock Classes="caption" Text="CHECKED DATA"/><TextBlock Text="{Binding Operations.BytesText}" FontSize="24"/></StackPanel><StackPanel Grid.Column="1"><TextBlock Classes="caption" Text="MISMATCHES"/><TextBlock Text="{Binding Operations.Mismatches}" FontSize="24"/></StackPanel><StackPanel Grid.Column="2"><TextBlock Classes="caption" Text="FAILED"/><TextBlock Text="{Binding Operations.Failures}" FontSize="24"/></StackPanel></Grid>
+              <TextBlock Text="{Binding Operations.Status}" Classes="subtitle"/>
+              <StackPanel Orientation="Horizontal" Spacing="10"><Button Classes="primary" Content="Verify my files" Command="{Binding Operations.StartVerificationCommand}" IsEnabled="{Binding Operations.CanVerify}"/><Button Classes="secondary" Content="Retry failed items" Command="{Binding Operations.RetryVerificationCommand}" IsEnabled="{Binding Operations.CanRetryVerification}"/><Button Classes="secondary" Content="Cancel" Command="{Binding Operations.CancelCommand}" IsVisible="{Binding Operations.IsBusy}"/></StackPanel>
+            </StackPanel>
+          </Border>
+          <Button Classes="secondary" Content="Review verification report  →" Command="{Binding ContinueCommand}" IsEnabled="{Binding CanContinueToReport}" HorizontalAlignment="Right"/>
+        </StackPanel>
+
         <StackPanel IsVisible="{Binding IsReportPage}" Spacing="22">
-          <StackPanel HorizontalAlignment="Center" MaxWidth="720">
-            <Border Width="86" Height="86" CornerRadius="43" Background="#E6F4EF" HorizontalAlignment="Center">
-              <TextBlock Text="✓" FontSize="42" Foreground="{StaticResource SuccessBrush}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
-            </Border>
-            <TextBlock Classes="h1" Text="Migration evidence" HorizontalAlignment="Center" Margin="0,18,0,0"/>
-            <TextBlock Text="Generate the final technician report after verification."
-                       Foreground="{StaticResource MutedBrush}"
-                       FontSize="15"
-                       TextAlignment="Center"
-                       Margin="0,6,0,0"/>
-          </StackPanel>
-
-          <Border Classes="card" MaxWidth="760" HorizontalAlignment="Center">
-            <StackPanel Spacing="16">
-              <Grid ColumnDefinitions="150,*">
-                <TextBlock Classes="caption" Text="SOURCE"/>
-                <TextBlock Grid.Column="1" Text="{Binding Operations.SourceSummary}" FontWeight="SemiBold"/>
-                <TextBlock Grid.Row="1" Classes="caption" Text="DESTINATION" Margin="0,12,0,0"/>
-                <TextBlock Grid.Row="1" Grid.Column="1" Text="{Binding Operations.DestinationSummary}" FontWeight="SemiBold" Margin="0,12,0,0"/>
-                <TextBlock Grid.Row="2" Classes="caption" Text="REPORT" Margin="0,12,0,0"/>
-                <TextBlock Grid.Row="2" Grid.Column="1" Text="{Binding Operations.ReportLocation}" TextWrapping="Wrap" Margin="0,12,0,0"/>
+          <Border Classes="result" Classes.verified="{Binding Operations.HasCleanVerification}" Width="88" Height="88" CornerRadius="44" HorizontalAlignment="Center"><TextBlock Text="{Binding Operations.ResultSymbol}" FontSize="44" Foreground="{StaticResource TextBrush}" HorizontalAlignment="Center" VerticalAlignment="Center"/></Border>
+          <StackPanel Spacing="8"><TextBlock Classes="h1" Text="{Binding Operations.ResultTitle}" TextAlignment="Center"/><TextBlock Classes="subtitle" Text="{Binding Operations.ResultDetail}" TextAlignment="Center"/></StackPanel>
+          <Border Classes="card">
+            <StackPanel Spacing="18">
+              <Grid ColumnDefinitions="120,*" RowDefinitions="Auto,Auto,Auto" RowSpacing="14">
+                <TextBlock Classes="caption" Text="FROM"/><TextBlock Grid.Column="1" Text="{Binding Operations.SourceSummary}" TextWrapping="Wrap"/>
+                <TextBlock Grid.Row="1" Classes="caption" Text="TO"/><TextBlock Grid.Row="1" Grid.Column="1" Text="{Binding Operations.DestinationSummary}" TextWrapping="Wrap"/>
+                <TextBlock Grid.Row="2" Classes="caption" Text="REPORT"/><TextBlock Grid.Row="2" Grid.Column="1" Text="{Binding Operations.ReportLocation}" TextWrapping="Wrap"/>
               </Grid>
-
-              <Button Classes="primary"
-                      Content="Generate final report"
-                      Command="{Binding Operations.GenerateReportCommand}"
-                      IsEnabled="{Binding Operations.CanGenerateReport}"
-                      HorizontalAlignment="Left"/>
-              <TextBlock Text="{Binding Operations.Status}" Foreground="{StaticResource MutedBrush}" TextWrapping="Wrap"/>
+              <TextBlock Text="{Binding Operations.Status}" Classes="subtitle"/>
+              <Button Classes="primary" Content="Save migration report" Command="{Binding Operations.GenerateReportCommand}" IsEnabled="{Binding Operations.CanGenerateReport}" HorizontalAlignment="Left"/>
             </StackPanel>
           </Border>
-
-          <Button Classes="secondary" Content="Start another migration" Command="{Binding StartOverCommand}" HorizontalAlignment="Center"/>
+          <Button Classes="secondary" Content="Start another migration" Command="{Binding StartOverCommand}" IsEnabled="{Binding CanStartOver}" HorizontalAlignment="Center"/>
         </StackPanel>
-
       </Grid>
     </ScrollViewer>
+    <Grid Grid.Row="3" ColumnDefinitions="Auto,*,Auto" Margin="24,0">
+      <Button Classes="secondary" Content="← Back" Command="{Binding BackCommand}" IsVisible="{Binding ShowBack}" IsEnabled="{Binding CanGoBack}" MinHeight="30" Padding="12,3"/>
+      <TextBlock Grid.Column="1" Text="Source preserved · Verification required" Classes="caption" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+      <TextBlock Grid.Column="2" Text="{Binding ApplicationVersion}" Classes="caption" FontSize="9" MaxWidth="190" TextTrimming="CharacterEllipsis" VerticalAlignment="Center"/>
+    </Grid>
   </Grid>
 </Window>

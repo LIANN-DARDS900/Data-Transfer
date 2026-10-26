@@ -4,7 +4,7 @@ using RoboTransfer.Core;
 
 namespace RoboTransfer.App.ViewModels;
 
-public sealed record WorkflowStep(string Number, string Name, bool IsCurrent, bool IsAvailable);
+public sealed record WorkflowStep(string Number, string Name, bool IsCurrent, bool IsComplete);
 public sealed record EnvironmentRow(string Label, string Value, string Detail, string BadgeClass)
 {
     public bool IsAvailable => BadgeClass == "available";
@@ -44,19 +44,52 @@ public sealed class MainWindowViewModel : ViewModelBase
         RefreshCommand = new AsyncCommand(RefreshAsync, ShowError);
         SelectSenderCommand = new DelegateCommand(() =>
         {
+            if (Operations.IsBusy || IsAnalyzing || Operations.HasLockedPlan) return;
             Role = MigrationRole.OldPc;
             SetPage(1);
         });
         SelectReceiverCommand = new DelegateCommand(() =>
         {
+            if (!ReceiverAvailable) return;
             Role = MigrationRole.NewPc;
             SetPage(1);
         });
-        BackCommand = new DelegateCommand(() => SetPage(Math.Max(0, currentPage - 1)));
-        ContinueCommand = new DelegateCommand(() => SetPage(Math.Min(6, currentPage + 1)));
-        StartOverCommand = new DelegateCommand(() => SetPage(0));
+        BackCommand = new DelegateCommand(() => { if (CanGoBack) SetPage(Math.Max(0, currentPage - 1)); });
+        ContinueCommand = new DelegateCommand(() =>
+        {
+            if (Operations.IsBusy || IsAnalyzing) return;
+            var allowed = currentPage switch
+            {
+                1 => CanContinueFromSetup, 2 => CanContinueToReview, 3 => CanContinueToTransfer,
+                4 => CanContinueToVerification, 5 => CanContinueToReport, _ => false
+            };
+            if (allowed) SetPage(currentPage + 1);
+        });
+        StartOverCommand = new DelegateCommand(() =>
+        {
+            if (Operations.IsBusy || IsAnalyzing) return;
+            Operations.Reset();
+            selectedProfile = null;
+            OnPropertyChanged(nameof(SelectedProfile));
+            EnvironmentRows.Clear(); Profiles.Clear();
+            activePolicy = null; activePlan = null; activeRobocopy = null; activeDestinations = [];
+            ErrorMessage = null;
+            OnPropertyChanged(nameof(HasAnalysis));
+            SetPage(0);
+        });
 
-        Operations.PropertyChanged += (_, _) => NotifyWizardState();
+        Operations.PropertyChanged += (_, args) =>
+        {
+            if (!Operations.IsBusy && args.PropertyName == nameof(Operations.IsBusy))
+            {
+                var page = Operations.Stage switch
+                {
+                    "Migration Plan" => 3, "Transfer" => 4, "Verification" => 5, "Report" => 6, _ => currentPage
+                };
+                if (page > currentPage) SetPage(page);
+            }
+            NotifyWizardState();
+        };
     }
 
     public OperationalWorkflowViewModel Operations { get; }
@@ -80,6 +113,10 @@ public sealed class MainWindowViewModel : ViewModelBase
     public bool IsVerificationPage => CurrentPage == 5;
     public bool IsReportPage => CurrentPage == 6;
     public bool ShowBack => CurrentPage > 0;
+    public bool CanGoBack => ShowBack && !IsAnalyzing && Operations.CanEditSelection;
+    public bool CanStartOver => !Operations.IsBusy && !IsAnalyzing;
+    public IReadOnlyList<WorkflowStep> Steps => new[] { "Set up", "Select data", "Review", "Transfer", "Verify", "Report" }
+        .Select((name, index) => new WorkflowStep((index + 1).ToString(), name, CurrentPage == index + 1, CurrentPage > index + 1)).ToArray();
     public string StepLabel => CurrentPage == 0 ? "START" : $"STEP {CurrentPage} OF 6";
     public string RoleTitle => Role == MigrationRole.OldPc ? "Send from this PC" : "Receive on this PC";
     public string RoleDetail => Role == MigrationRole.OldPc
@@ -137,10 +174,10 @@ public sealed class MainWindowViewModel : ViewModelBase
         get => selectedProfile;
         set
         {
-            if (Set(ref selectedProfile, value))
+            if (Operations.CanEditSelection && !IsAnalyzing && Set(ref selectedProfile, value))
             {
                 OnPropertyChanged(nameof(ProfileDetail));
-                ConfigureOperations();
+                if (value is null) Operations.Reset(); else ConfigureOperations();
                 NotifyWizardState();
             }
         }
@@ -151,18 +188,22 @@ public sealed class MainWindowViewModel : ViewModelBase
         : $"{SelectedProfile.KnownFolders.Count(folder => folder.Resolution == KnownFolderResolution.Resolved)} known folders resolved";
 
     public bool CanContinueFromSetup =>
-        HasAnalysis &&
+        !IsAnalyzing && !Operations.IsBusy && HasAnalysis &&
         Role == MigrationRole.OldPc &&
         SelectedProfile is not null &&
         Operations.SelectedDestination is not null;
 
-    public bool CanContinueToReview => Operations.Stage == "Migration Plan";
+    public bool CanContinueToReview => Operations.HasCompletedScan;
     public bool CanContinueToTransfer => Operations.CanTransfer;
-    public bool CanContinueToVerification => Operations.CanVerify || Operations.Stage == "Verification";
+    public bool CanContinueToVerification => Operations.HasCompletedTransfer && !Operations.IsBusy;
     public bool CanContinueToReport => Operations.CanGenerateReport;
 
     private async Task RefreshAsync(CancellationToken cancellationToken)
     {
+        if (!Operations.CanEditSelection) return;
+        var previousProfileId = SelectedProfile?.Id;
+        selectedProfile = null;
+        Operations.Reset();
         IsAnalyzing = true;
         ErrorMessage = null;
 
@@ -249,6 +290,9 @@ public sealed class MainWindowViewModel : ViewModelBase
 
             OnPropertyChanged(nameof(HasAnalysis));
             OnPropertyChanged(nameof(ProfileDetail));
+            selectedProfile = Profiles.FirstOrDefault(profile => profile.Id == previousProfileId) ?? (Profiles.Count == 1 ? Profiles[0] : null);
+            OnPropertyChanged(nameof(SelectedProfile));
+            OnPropertyChanged(nameof(ProfileDetail));
             ConfigureOperations();
             NotifyWizardState();
         }
@@ -304,6 +348,9 @@ public sealed class MainWindowViewModel : ViewModelBase
             nameof(IsVerificationPage),
             nameof(IsReportPage),
             nameof(ShowBack),
+            nameof(CanGoBack),
+            nameof(CanStartOver),
+            nameof(Steps),
             nameof(StepLabel),
             nameof(CanContinueFromSetup),
             nameof(CanContinueToReview),

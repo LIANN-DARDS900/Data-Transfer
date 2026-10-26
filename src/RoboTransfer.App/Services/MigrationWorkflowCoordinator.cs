@@ -5,6 +5,14 @@ namespace RoboTransfer.App.Services;
 
 public sealed class MigrationWorkflowCoordinator(IManifestScanner scanner, IManifestReader manifestReader, IMigrationJournal journal, IMigrationRecovery recovery, IExecutionPlanStore plans, IDestinationValidator destinations, ITransferReconciler reconciler, KeepBothTransferEngineFactory keepBothFactory, IVerificationEngine verification, IVerificationStore verificationStore, IOperationalRecordStore operationalRecords, IReportGenerator reports, string dataRoot)
 {
+    public async Task<(long Files, long Bytes)> GetEligibleTotalsAsync(MigrationExecutionPlan plan, CancellationToken token)
+    {
+        var inspection = await manifestReader.InspectAsync(plan.ManifestPath, token);
+        if (inspection.State != ManifestReadState.Complete || inspection.Footer is null)
+            throw new InvalidDataException("A complete manifest is required for progress totals.");
+        return (inspection.Footer.EligibleEntryCount, inspection.Footer.EligibleBytes);
+    }
+
     public async Task<ManifestScanResult> ScanAsync(UserProfile profile, IReadOnlyList<KnownFolder> folders, PolicyProfile policy, IProgress<ManifestScanProgress> progress, CancellationToken cancellationToken)
     {
         var scanStarted = System.Diagnostics.Stopwatch.StartNew(); var sessionId = Guid.NewGuid(); var directory = Path.Combine(dataRoot, "manifests"); Directory.CreateDirectory(directory); var path = Path.Combine(directory, $"{sessionId:N}.jsonl");
@@ -48,7 +56,27 @@ public sealed class MigrationWorkflowCoordinator(IManifestScanner scanner, IMani
     public async Task<(MigrationExecutionPlan? Plan, DestinationValidationResult Validation)> ValidateResumeAsync(MigrationSession session, UserProfile profile, PolicyProfile policy, StorageVolume? volume, ToolCapability robocopy, CancellationToken cancellationToken) { var plan = await plans.LoadAsync(session.Id, cancellationToken); if (plan is null) return (null, new(false, [new(ErrorCategory.ConfigurationInvalid, "Execution plan is missing. Resume is blocked.")])); var sources = profile.KnownFolders.Where(f => plan.SelectedKnownFolders.Contains(f.Kind)).Select(f => f.Path!).ToArray(); var context = new DestinationValidationContext(plan, sources, policy, volume, true, robocopy); return (plan, await recovery.ValidateResumeAsync(session, plan, context, cancellationToken)); }
     public async Task<VerificationResult> VerifyAsync(MigrationExecutionPlan plan, UserProfile profile, PolicyProfile policy, IReadOnlySet<string>? retry, IProgress<VerificationProgress> progress, CancellationToken cancellationToken)
     {
-        var roots = profile.KnownFolders.Where(folder => plan.SelectedKnownFolders.Contains(folder.Kind) && folder.Path is not null).ToDictionary(folder => folder.Kind, folder => folder.Path!); var result = await verification.VerifyAsync(new(plan, plan.Fingerprint, PolicyFingerprint.Create(policy), roots, plan.DestinationPath, plan.VerificationRequirement, retry), progress, cancellationToken); await verificationStore.SaveAsync(result, CancellationToken.None); var operations = await operationalRecords.LoadAsync(plan.SessionId, CancellationToken.None) ?? new(plan.SessionId, TimeSpan.Zero, TimeSpan.Zero, 0, 0, 0, 0, 0, [], TimeSpan.Zero, null); await operationalRecords.SaveAsync(operations with { VerificationElapsed = result.CompletedAt - result.StartedAt, VerificationResultIdentity = result.Id }, CancellationToken.None); var session = await journal.LoadAsync(plan.SessionId, CancellationToken.None); if (session is not null) await journal.SaveAsync(session with { Status = result.State is VerificationRunState.Completed or VerificationRunState.CompletedWithWarnings ? MigrationStatus.Completed : result.State == VerificationRunState.Cancelled ? MigrationStatus.Interrupted : MigrationStatus.Failed, UpdatedAt = DateTimeOffset.UtcNow, LastError = result.State == VerificationRunState.Failed ? ErrorCategory.VerificationFailed : null }, CancellationToken.None); return result;
+        var roots = profile.KnownFolders.Where(folder => plan.SelectedKnownFolders.Contains(folder.Kind) && folder.Path is not null).ToDictionary(folder => folder.Kind, folder => folder.Path!); var result = await verification.VerifyAsync(new(plan, plan.Fingerprint, PolicyFingerprint.Create(policy), roots, plan.DestinationPath, plan.VerificationRequirement, retry), progress, cancellationToken);
+        if (retry is not null)
+        {
+            var previous = await verificationStore.LoadAsync(plan.SessionId, cancellationToken)
+                ?? throw new InvalidDataException("A previous verification is required for a targeted retry.");
+            if (previous.ExecutionPlanFingerprint != plan.Fingerprint || previous.ManifestIdentity != plan.ManifestIdentity)
+                throw new InvalidDataException("Previous verification belongs to a different plan.");
+            var merged = previous.Entries.ToDictionary(entry => $"{entry.KnownFolder}/{entry.RelativePath}", StringComparer.OrdinalIgnoreCase);
+            foreach (var entry in result.Entries) merged[$"{entry.KnownFolder}/{entry.RelativePath}"] = entry;
+            var entries = merged.Values.ToArray();
+            var verified = entries.Where(entry => entry.Status == VerificationEntryStatus.Verified).ToArray();
+            var skipped = entries.LongCount(entry => entry.Status == VerificationEntryStatus.Skipped);
+            var allVerified = verified.LongLength == previous.EligibleFiles && entries.All(entry => entry.Status is VerificationEntryStatus.Verified or VerificationEntryStatus.Skipped);
+            result = result with
+            {
+                Entries = entries, StartedAt = previous.StartedAt, EligibleFiles = previous.EligibleFiles, EligibleBytes = previous.EligibleBytes,
+                VerifiedFiles = verified.LongLength, VerifiedBytes = verified.Sum(entry => entry.ExpectedBytes), SkippedFiles = skipped,
+                State = result.State == VerificationRunState.Cancelled ? VerificationRunState.Cancelled : !allVerified ? VerificationRunState.Failed : skipped > 0 ? VerificationRunState.CompletedWithWarnings : VerificationRunState.Completed
+            };
+        }
+        await verificationStore.SaveAsync(result, CancellationToken.None); var operations = await operationalRecords.LoadAsync(plan.SessionId, CancellationToken.None) ?? new(plan.SessionId, TimeSpan.Zero, TimeSpan.Zero, 0, 0, 0, 0, 0, [], TimeSpan.Zero, null); await operationalRecords.SaveAsync(operations with { VerificationElapsed = result.CompletedAt - result.StartedAt, VerificationResultIdentity = result.Id }, CancellationToken.None); var session = await journal.LoadAsync(plan.SessionId, CancellationToken.None); if (session is not null) await journal.SaveAsync(session with { Status = result.State is VerificationRunState.Completed or VerificationRunState.CompletedWithWarnings ? MigrationStatus.Completed : result.State == VerificationRunState.Cancelled ? MigrationStatus.Interrupted : MigrationStatus.Failed, UpdatedAt = DateTimeOffset.UtcNow, LastError = result.State == VerificationRunState.Failed ? ErrorCategory.VerificationFailed : null }, CancellationToken.None); return result;
     }
     public async Task<(string JsonPath, string HtmlPath)> GenerateReportAsync(MigrationExecutionPlan plan, CancellationToken cancellationToken)
     {

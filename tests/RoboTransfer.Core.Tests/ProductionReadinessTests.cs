@@ -49,6 +49,37 @@ public sealed class ProductionReadinessTests : IDisposable
             result.Status,
             new[] { ExecutableTrustStatus.Unavailable, ExecutableTrustStatus.NotTrusted, ExecutableTrustStatus.InvalidIdentity });
     }
+    [Fact]
+    public async Task Windows_valid_system_signature_is_accepted_by_robocopy_validator()
+    {
+        if (!OperatingSystem.IsWindows()) return;
+        var windows = Environment.GetFolderPath(Environment.SpecialFolder.Windows);
+        var robocopy = Path.Combine(windows, "System32", "robocopy.exe");
+        var start = new System.Diagnostics.ProcessStartInfo(Path.Combine(windows, "System32", "WindowsPowerShell", "v1.0", "powershell.exe"))
+        {
+            UseShellExecute = false, RedirectStandardOutput = true, RedirectStandardError = true, CreateNoWindow = true
+        };
+        start.ArgumentList.Add("-NoProfile");
+        start.ArgumentList.Add("-NonInteractive");
+        start.ArgumentList.Add("-EncodedCommand");
+        const string command = "$ErrorActionPreference = 'Stop'; $ProgressPreference = 'SilentlyContinue'; " +
+            "[string](Get-AuthenticodeSignature -LiteralPath $env:ROBOTRANSFER_TEST_PATH).Status";
+        start.ArgumentList.Add(Convert.ToBase64String(System.Text.Encoding.Unicode.GetBytes(command)));
+        start.Environment["ROBOTRANSFER_TEST_PATH"] = robocopy;
+        start.Environment["PSModulePath"] = Path.Combine(windows, "System32", "WindowsPowerShell", "v1.0", "Modules");
+        using var process = System.Diagnostics.Process.Start(start)!;
+        using var timeout = CancellationTokenSource.CreateLinkedTokenSource(TestContext.Current.CancellationToken);
+        timeout.CancelAfter(TimeSpan.FromSeconds(30));
+        var output = process.StandardOutput.ReadToEndAsync(timeout.Token);
+        var error = process.StandardError.ReadToEndAsync(timeout.Token);
+        try { await process.WaitForExitAsync(timeout.Token); }
+        catch (OperationCanceledException) { if (!process.HasExited) process.Kill(true); throw; }
+        Assert.True(process.ExitCode == 0, await error);
+        Assert.Equal("Valid", (await output).Trim());
+        var result = await new WindowsExecutableTrustValidator().ValidateAsync(robocopy, true, timeout.Token);
+        Assert.True(result.IsAuthorized, result.Explanation);
+        Assert.Contains("Microsoft", result.Publisher ?? "", StringComparison.OrdinalIgnoreCase);
+    }
     [Fact] public void Version_metadata_is_not_blank() => Assert.False(string.IsNullOrWhiteSpace(ApplicationIdentity.Version));
     public void Dispose() { if (Directory.Exists(root)) Directory.Delete(root, true); if (Directory.Exists(root + "-target")) Directory.Delete(root + "-target", true); }
 }

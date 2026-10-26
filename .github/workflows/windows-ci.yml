@@ -37,3 +37,12 @@ jobs:
 
       - name: Report vulnerable application dependencies
         run: dotnet list src/RoboTransfer.App/RoboTransfer.App.csproj package --vulnerable --include-transitive
+
+      - name: Render native wizard previews (offline sample data)
+        run: dotnet run --project tools/UiPreview/UiPreview.csproj -c Release -- artifacts/ui-preview
+
+      - name: Upload native UI previews
+        uses: actions/upload-artifact@v4
+        with:
+          name: RoboTransfer-native-ui
+          path: artifacts/ui-preview/*.png
