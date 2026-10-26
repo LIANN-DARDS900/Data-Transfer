@@ -66,6 +66,7 @@ public sealed class ProductionReadinessTests : IDisposable
             "[string](Get-AuthenticodeSignature -LiteralPath $env:ROBOTRANSFER_TEST_PATH).Status";
         start.ArgumentList.Add(Convert.ToBase64String(System.Text.Encoding.Unicode.GetBytes(command)));
         start.Environment["ROBOTRANSFER_TEST_PATH"] = robocopy;
+        start.Environment["PSModulePath"] = Path.Combine(windows, "System32", "WindowsPowerShell", "v1.0", "Modules");
         using var process = System.Diagnostics.Process.Start(start)!;
         using var timeout = CancellationTokenSource.CreateLinkedTokenSource(TestContext.Current.CancellationToken);
         timeout.CancelAfter(TimeSpan.FromSeconds(30));

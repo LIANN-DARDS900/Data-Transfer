@@ -131,6 +131,10 @@ public sealed class WindowsExecutableTrustValidator : IExecutableTrustValidator
         startInfo.ArgumentList.Add("-EncodedCommand");
         startInfo.ArgumentList.Add(encodedCommand);
         startInfo.Environment["ROBOTRANSFER_TRUST_PATH"] = path;
+        // A caller launched from PowerShell 7 can pass incompatible Core module paths to
+        // Windows PowerShell 5.1. Resolve only the inbox modules of this exact host.
+        // This changes the child environment only; no machine policy is modified.
+        startInfo.Environment["PSModulePath"] = Path.Combine(Path.GetDirectoryName(powershell)!, "Modules");
 
         using var process = new Process { StartInfo = startInfo };
         if (!process.Start())
