@@ -36,6 +36,8 @@ public sealed class MigrationWorkflowCoordinator(IManifestScanner scanner, IMani
 
     public async Task<MigrationExecutionPlan> LockPlanAsync(ManifestScanResult scan, UserProfile profile, IReadOnlyList<KnownFolder> folders, MigrationPlan recommendation, PolicyProfile policy, ToolCapability robocopy, StorageVolume? volume, CancellationToken cancellationToken = default, ReceiverBinding? receiver = null)
     {
+        if (!policy.AllowRobocopy || robocopy.State != CapabilityState.Available || recommendation.Strategy != MigrationStrategy.RobocopyKnownFolders || recommendation.Status != MigrationStatus.Ready)
+            throw new InvalidOperationException("The current policy, tool capability and migration strategy do not authorize this copy operation.");
         var destination = recommendation.Destination ?? throw new InvalidOperationException("No approved destination is available.");
         var plan = new MigrationExecutionPlan(scan.Header.SessionId, DateTimeOffset.UtcNow, Environment.MachineName, profile.Id, folders.Select(f => f.Kind).ToArray(), Path.GetFileNameWithoutExtension(scan.ManifestReference), scan.ManifestReference, scan.Header.EntryCount, scan.Header.TotalBytes, recommendation.Route, recommendation.Strategy, volume?.PhysicalDiskId ?? destination.Location, destination.Location, destination.AvailableBytes ?? 0, recommendation.ConflictPolicy, "Unavailable cloud content skipped", recommendation.Verification, policy.SchemaVersion, PolicyFingerprint.Create(policy), robocopy.ExecutablePath ?? string.Empty, robocopy.Version, ApplicationIdentity.Version, Receiver: receiver);
         if (receiver is not null)
@@ -53,6 +55,7 @@ public sealed class MigrationWorkflowCoordinator(IManifestScanner scanner, IMani
     public async Task<TransferReconciliationResult> TransferAsync(MigrationExecutionPlan plan, UserProfile profile, PolicyProfile policy, StorageVolume? volume, IProgress<TransferProgress> progress, CancellationToken cancellationToken)
     {
         RequireSourceIdentity(plan, profile);
+        if (!policy.AllowRobocopy || plan.Strategy != MigrationStrategy.RobocopyKnownFolders) throw new InvalidOperationException("This migration strategy is not authorized for execution.");
         var transferStarted = System.Diagnostics.Stopwatch.StartNew();
         if (plan.Receiver is not null)
         {
@@ -95,6 +98,8 @@ public sealed class MigrationWorkflowCoordinator(IManifestScanner scanner, IMani
     public IAsyncEnumerable<MigrationSession> DiscoverAsync(CancellationToken cancellationToken = default) => recovery.DiscoverAsync(cancellationToken);
     public Task AbandonAsync(MigrationSession session, CancellationToken cancellationToken = default) => recovery.AbandonAsync(session, cancellationToken);
     public async Task<(MigrationExecutionPlan? Plan, DestinationValidationResult Validation)> ValidateResumeAsync(MigrationSession session, UserProfile profile, PolicyProfile policy, StorageVolume? volume, ToolCapability robocopy, CancellationToken cancellationToken) { var plan = await plans.LoadAsync(session.Id, cancellationToken);
+        if (plan is not null && (!policy.AllowRobocopy || robocopy.State != CapabilityState.Available || plan.Strategy != MigrationStrategy.RobocopyKnownFolders))
+            return (plan, new(false, [new(ErrorCategory.ToolUnavailable, "The current policy or tool capability does not authorize resuming this copy strategy.")]));
         if (plan is not null && (!profile.IsSelectable || profile.Id != plan.SourceProfileIdentity || !string.Equals(Environment.MachineName, plan.SourceMachineIdentity, StringComparison.OrdinalIgnoreCase)))
             return (plan, new(false, [new(ErrorCategory.ConfigurationInvalid, "The selected source PC or employee differs from this migration. Select the original profile and revalidate.")]));
         if (plan?.Receiver is not null)

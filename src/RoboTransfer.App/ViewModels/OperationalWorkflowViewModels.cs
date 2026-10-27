@@ -130,7 +130,7 @@ public sealed class OperationalWorkflowViewModel : ViewModelBase
         var option = new DestinationOption($"{offer.ReceiverMachine} · {offer.ReceiverName}", new(MigrationRoute.ConfiguredNetworkShare, offer.FilesPath, null), null);
         InvalidateScan();
         Destinations.Add(option);
-        recommendation = recommendation with { Route = MigrationRoute.ConfiguredNetworkShare, Strategy = MigrationStrategy.RobocopyKnownFolders, Destination = option.Destination };
+        recommendation = recommendation with { Route = MigrationRoute.ConfiguredNetworkShare, Strategy = MigrationStrategy.RobocopyKnownFolders, Status = MigrationStatus.Ready, Destination = option.Destination };
         destinationVolume = null;
         receiver = RoboTransfer.Persistence.ReceiverInboxService.Bind(offer);
         OnPropertyChanged(nameof(SelectedDestination));
