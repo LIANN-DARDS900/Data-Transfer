@@ -46,6 +46,28 @@ public sealed class WizardWorkflowTests : IDisposable
     private Task Run(System.Windows.Input.ICommand command) => ((AsyncCommand)command).ExecuteAsync(TestContext.Current.CancellationToken);
 
     [Fact]
+    public async Task Disabled_copy_policy_cannot_be_overridden_by_a_ready_recommendation()
+    {
+        operations.Configure(profile, policy with { AllowRobocopy = false }, recommendation, new("Robocopy", CapabilityState.Available, "robocopy.exe", "test"), [destination]);
+        await Run(operations.StartScanCommand);
+        operations.ReviewConfirmed = true;
+        await Run(operations.LockPlanCommand);
+        Assert.False(operations.HasLockedPlan);
+        Assert.False(operations.CanTransfer);
+    }
+
+    [Fact]
+    public async Task Unsupported_usmt_execution_is_not_silently_replaced_by_file_copy()
+    {
+        operations.Configure(profile, policy, recommendation with { Strategy = MigrationStrategy.Usmt }, new("Robocopy", CapabilityState.Available, "robocopy.exe", "test"), [destination]);
+        await Run(operations.StartScanCommand);
+        operations.ReviewConfirmed = true;
+        await Run(operations.LockPlanCommand);
+        Assert.False(operations.HasLockedPlan);
+        Assert.False(operations.CanTransfer);
+    }
+
+    [Fact]
     public async Task Verification_cannot_start_before_a_completed_transfer()
     {
         await Run(operations.StartScanCommand);

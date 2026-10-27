@@ -8,7 +8,7 @@ RoboTransfer uses a Smart Switch-inspired interaction pattern: choose this PC's 
 
 ## Behavior
 
-- The old-PC action begins setup. Direct receiving on the new PC is explicitly unavailable; there is no implied pairing service or receiver.
+- The old-PC action begins setup. The new-PC action prepares a receiver inbox on an existing approved Windows share hosted by that computer. The sender checks the path, compares the inbox identifier and confirms the receiving PC/employee. The existing Windows share provides authentication and transport; no custom listener or share setup is performed.
 - Analyze the endpoint and choose a registered employee profile and a policy-approved drive or UNC share. Technical details and unfinished sessions live in expanders.
 - Select all or clear only available Known Folders. Changing source, folder selection or destination discards stale scan/approval evidence.
 - A completed scan advances to review. Confirming the plan locks selections and advances to transfer.
@@ -17,6 +17,10 @@ RoboTransfer uses a Smart Switch-inspired interaction pattern: choose this PC's 
 - Verification becomes available only after transfer reconciliation succeeds. Failed/cancelled verification can be reported, but never displays a green success state.
 - Retrying failed verification items merges the new results with the existing verified evidence for the same plan and manifest.
 - Starting another migration clears the old profile, plan, counters, verification and report location. Durable session/report files remain available on disk.
+
+The receiver shows sender-reported progress and provides the inbox/report paths. Incoming files stay inside the migration inbox instead of merging into a Windows profile. See the [receiver runbook](../operations/PC-to-PC-Receiver-Runbook.md) for setup and physical qualification.
+
+![Native receiver inbox](receiver-ready.png)
 
 ## Preview and validation
 

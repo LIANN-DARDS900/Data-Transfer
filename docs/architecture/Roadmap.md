@@ -50,6 +50,16 @@ Still required before Release Candidate classification:
 - Real Windows validation of executable publisher/trust behavior under enterprise policy.
 - Review of release scripts and qualification artifacts as a complete package.
 
+## Approved-share Receiver Workflow — IMPLEMENTED FOR QUALIFICATION
+
+- New-PC inbox preparation on an existing approved locally hosted share.
+- Sender identity review and inbox-code comparison.
+- Immutable receiver binding, one sender session, capacity checks and revalidated resume.
+- Existing copy/verification/report integration and receiver-side sender-status monitoring.
+- Strict protocol/path metadata tests and an end-to-end virtual-share copy test.
+
+This does not bypass SMB blocks or prove RJ45 behavior. Physical Windows authentication, cable interruption, host identity, performance and endpoint-policy tests remain pending. See ADR-006 and the receiver runbook.
+
 ## Physical Qualification — NEXT ⏳
 
 Run the controlled OLD-PC → NEW-PC qualification matrix on managed Windows 11 x64 devices:

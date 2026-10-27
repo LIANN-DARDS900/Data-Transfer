@@ -18,11 +18,11 @@ See [Release Candidate checklist](docs/qualification/Release-Candidate-Checklist
 
 ## Guided migration UI
 
-The native Avalonia wizard follows a Smart Switch-inspired flow with old/new PC role cards, folder selection, review, real file/byte progress, verification and a final report. Direct receiving remains unavailable in this qualification build.
+The native Avalonia wizard follows a Smart Switch-inspired flow with old/new PC role cards, folder selection, review, real file/byte progress, verification and a final report. The new PC can now prepare a receiver inbox on an existing approved Windows share it hosts; the old PC confirms that recipient before copying. This requires working SMB permissions/addressing over Ethernet or the approved network. A cable alone does not enable a blocked route.
 
 ![RoboTransfer native wizard](docs/ui/welcome.png)
 
-See [UI behavior and native previews](docs/ui/Smart-Switch-Wizard.md).
+See [UI behavior and native previews](docs/ui/Smart-Switch-Wizard.md), the [PC-to-PC runbook](docs/operations/PC-to-PC-Receiver-Runbook.md), and [receiver architecture/qualification limits](docs/architecture/ADR-006-Approved-Share-Receiver-Inbox.md).
 
 ## Implemented capabilities
 

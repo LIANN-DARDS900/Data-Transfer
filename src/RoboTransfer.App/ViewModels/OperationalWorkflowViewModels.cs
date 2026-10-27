@@ -47,6 +47,7 @@ public sealed class OperationalWorkflowViewModel : ViewModelBase
     private CancellationTokenSource? operation;
     private ManifestScanResult? scan;
     private MigrationExecutionPlan? plan;
+    private ReceiverBinding? receiver;
     private VerificationResult? verificationResult;
     private readonly Stopwatch timer = new();
     private bool transferCompleted;
@@ -99,6 +100,8 @@ public sealed class OperationalWorkflowViewModel : ViewModelBase
             if (!CanEditSelection || value is null || recommendation is null || !Destinations.Contains(value) || value == SelectedDestination) return;
             recommendation = recommendation with { Destination = value.Destination, Route = value.Destination.Route };
             destinationVolume = value.Volume;
+            receiver = null;
+            OnPropertyChanged(nameof(RecipientSummary)); OnPropertyChanged(nameof(HasReceiver));
             InvalidateScan();
             OnPropertyChanged();
             NotifySummaries();
@@ -118,6 +121,22 @@ public sealed class OperationalWorkflowViewModel : ViewModelBase
     public TimeSpan Elapsed { get => elapsed; private set { if (Set(ref elapsed, value)) OnPropertyChanged(nameof(ElapsedText)); } }
     public string ElapsedText => Elapsed.ToString(@"hh\:mm\:ss");
     public bool IsBusy { get => busy; private set { if (Set(ref busy, value)) NotifyState(); } }
+    public string RecipientSummary => receiver is null ? "Standard approved destination" : $"{receiver.ReceiverMachine} · {receiver.ReceiverName}";
+    public bool HasReceiver => receiver is not null;
+    public void AttachReceiver(ReceiverOffer offer)
+    {
+        if (!CanEditSelection || recommendation is null || !policy.AllowConfiguredNetworkShare || !policy.AllowRobocopy || robocopy?.State != CapabilityState.Available)
+            throw new InvalidOperationException("Analyze this PC, select the source profile and confirm a permitted copy tool first.");
+        var option = new DestinationOption($"{offer.ReceiverMachine} · {offer.ReceiverName}", new(MigrationRoute.ConfiguredNetworkShare, offer.FilesPath, null), null);
+        InvalidateScan();
+        Destinations.Add(option);
+        recommendation = recommendation with { Route = MigrationRoute.ConfiguredNetworkShare, Strategy = MigrationStrategy.RobocopyKnownFolders, Status = MigrationStatus.Ready, Destination = option.Destination };
+        destinationVolume = null;
+        receiver = RoboTransfer.Persistence.ReceiverInboxService.Bind(offer);
+        OnPropertyChanged(nameof(SelectedDestination));
+        OnPropertyChanged(nameof(RecipientSummary)); OnPropertyChanged(nameof(HasReceiver));
+        NotifySummaries();
+    }
     public bool HasLockedPlan => plan is not null;
     public bool HasCompletedTransfer => transferCompleted;
     public bool CanEditSelection => !IsBusy && !HasLockedPlan;
@@ -157,6 +176,8 @@ public sealed class OperationalWorkflowViewModel : ViewModelBase
     {
         if (!CanEditSelection) return;
         foreach (var folder in Folders) folder.PropertyChanged -= FolderChanged;
+        receiver = null;
+        OnPropertyChanged(nameof(RecipientSummary)); OnPropertyChanged(nameof(HasReceiver));
         profile = selected; policy = currentPolicy; recommendation = currentPlan; robocopy = tool;
         Folders.Clear();
         foreach (var folder in selected.KnownFolders)
@@ -177,6 +198,8 @@ public sealed class OperationalWorkflowViewModel : ViewModelBase
     {
         if (IsBusy) return;
         foreach (var folder in Folders) folder.PropertyChanged -= FolderChanged;
+        receiver = null;
+        OnPropertyChanged(nameof(RecipientSummary)); OnPropertyChanged(nameof(HasReceiver));
         profile = null; recommendation = null; robocopy = null; destinationVolume = null;
         policy = PolicyProfile.Conservative;
         Folders.Clear(); Destinations.Clear();
@@ -246,7 +269,7 @@ public sealed class OperationalWorkflowViewModel : ViewModelBase
         IsBusy = true;
         try
         {
-            plan = await coordinator.LockPlanAsync(scan, profile, Folders.Where(f => f.IsSelected && f.IsEligible).Select(f => f.Folder).ToArray(), recommendation, policy, robocopy, destinationVolume, token);
+            plan = await coordinator.LockPlanAsync(scan, profile, Folders.Where(f => f.IsSelected && f.IsEligible).Select(f => f.Folder).ToArray(), recommendation, policy, robocopy, destinationVolume, token, receiver);
             (totalFiles, totalBytes) = await coordinator.GetEligibleTotalsAsync(plan, token);
             Files = Bytes = 0;
             Stage = "Transfer";
@@ -285,7 +308,9 @@ public sealed class OperationalWorkflowViewModel : ViewModelBase
         {
             var result = await coordinator.ValidateResumeAsync(SelectedRecovery, profile, policy, destinationVolume, robocopy, token);
             if (!result.Validation.IsValid || result.Plan is null) { Status = string.Join(" ", result.Validation.Errors.Select(e => e.TechnicianMessage)); return; }
-            plan = result.Plan; transferCompleted = false;
+            plan = result.Plan; receiver = plan.Receiver;
+            OnPropertyChanged(nameof(RecipientSummary)); OnPropertyChanged(nameof(HasReceiver));
+            transferCompleted = false;
             (totalFiles, totalBytes) = await coordinator.GetEligibleTotalsAsync(plan, token); Files = Bytes = 0;
             Stage = "Transfer"; Status = "Resume checks passed. Start the transfer to continue.";
         }
@@ -335,7 +360,7 @@ public sealed class OperationalWorkflowViewModel : ViewModelBase
     {
         if (!CanGenerateReport || plan is null) return;
         IsBusy = true;
-        try { var result = await coordinator.GenerateReportAsync(plan, token); ReportLocation = result.HtmlPath; Status = "Your JSON and HTML migration reports are saved."; Stage = "Report"; }
+        try { var result = await coordinator.GenerateReportAsync(plan, token, policy); ReportLocation = result.HtmlPath; Status = "Your JSON and HTML migration reports are saved."; Stage = "Report"; }
         finally { IsBusy = false; }
     }
     private async Task AbandonAsync(CancellationToken token)
