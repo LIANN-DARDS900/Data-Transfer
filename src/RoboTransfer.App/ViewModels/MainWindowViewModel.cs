@@ -34,12 +34,15 @@ public sealed class MainWindowViewModel : ViewModelBase
         ICapabilityDetector detector,
         IMigrationPlanner planner,
         IPolicyProvider policies,
-        OperationalWorkflowViewModel operations)
+        OperationalWorkflowViewModel operations, ReceiverWorkflowViewModel? receiver = null)
     {
         this.detector = detector;
         this.planner = planner;
         this.policies = policies;
         Operations = operations;
+        Receiver = receiver ?? new ReceiverWorkflowViewModel(null);
+        Receiver.SenderConnected += offer => Operations.AttachReceiver(offer);
+        EnvironmentRows.CollectionChanged += (_, _) => { OnPropertyChanged(nameof(HasAnalysis)); NotifyWizardState(); };
 
         RefreshCommand = new AsyncCommand(RefreshAsync, ShowError);
         SelectSenderCommand = new DelegateCommand(() =>
@@ -50,7 +53,7 @@ public sealed class MainWindowViewModel : ViewModelBase
         });
         SelectReceiverCommand = new DelegateCommand(() =>
         {
-            if (!ReceiverAvailable) return;
+            if (!ReceiverAvailable || Operations.IsBusy || Operations.HasLockedPlan || IsAnalyzing) return;
             Role = MigrationRole.NewPc;
             SetPage(1);
         });
@@ -67,8 +70,8 @@ public sealed class MainWindowViewModel : ViewModelBase
         });
         StartOverCommand = new DelegateCommand(() =>
         {
-            if (Operations.IsBusy || IsAnalyzing) return;
-            Operations.Reset();
+            if (Operations.IsBusy || IsAnalyzing || Receiver.IsBusy || Receiver.HasInbox) return;
+            Operations.Reset(); Receiver.Reset();
             selectedProfile = null;
             OnPropertyChanged(nameof(SelectedProfile));
             EnvironmentRows.Clear(); Profiles.Clear();
@@ -78,6 +81,7 @@ public sealed class MainWindowViewModel : ViewModelBase
             SetPage(0);
         });
 
+        Receiver.PropertyChanged += (_, _) => NotifyWizardState();
         Operations.PropertyChanged += (_, args) =>
         {
             if (!Operations.IsBusy && args.PropertyName == nameof(Operations.IsBusy))
@@ -93,6 +97,7 @@ public sealed class MainWindowViewModel : ViewModelBase
     }
 
     public OperationalWorkflowViewModel Operations { get; }
+    public ReceiverWorkflowViewModel Receiver { get; }
     public ObservableCollection<EnvironmentRow> EnvironmentRows { get; } = [];
     public ObservableCollection<UserProfile> Profiles { get; } = [];
 
@@ -106,23 +111,24 @@ public sealed class MainWindowViewModel : ViewModelBase
     public string ApplicationVersion => ApplicationIdentity.Version;
     public int CurrentPage => currentPage;
     public bool IsWelcomePage => CurrentPage == 0;
-    public bool IsSetupPage => CurrentPage == 1;
+    public bool IsSetupPage => CurrentPage == 1 && Role == MigrationRole.OldPc;
+    public bool IsReceiverPage => CurrentPage == 1 && Role == MigrationRole.NewPc;
     public bool IsDataPage => CurrentPage == 2;
     public bool IsReviewPage => CurrentPage == 3;
     public bool IsTransferPage => CurrentPage == 4;
     public bool IsVerificationPage => CurrentPage == 5;
     public bool IsReportPage => CurrentPage == 6;
     public bool ShowBack => CurrentPage > 0;
-    public bool CanGoBack => ShowBack && !IsAnalyzing && Operations.CanEditSelection;
-    public bool CanStartOver => !Operations.IsBusy && !IsAnalyzing;
+    public bool CanGoBack => ShowBack && !IsAnalyzing && Operations.CanEditSelection && !Receiver.IsBusy && !Receiver.HasInbox;
+    public bool CanStartOver => !Operations.IsBusy && !IsAnalyzing && !Receiver.IsBusy && !Receiver.HasInbox;
     public IReadOnlyList<WorkflowStep> Steps => new[] { "Set up", "Select data", "Review", "Transfer", "Verify", "Report" }
         .Select((name, index) => new WorkflowStep((index + 1).ToString(), name, CurrentPage == index + 1, CurrentPage > index + 1)).ToArray();
     public string StepLabel => CurrentPage == 0 ? "START" : $"STEP {CurrentPage} OF 6";
     public string RoleTitle => Role == MigrationRole.OldPc ? "Send from this PC" : "Receive on this PC";
     public string RoleDetail => Role == MigrationRole.OldPc
         ? "Choose the employee profile and an approved destination. RoboTransfer will never delete the source."
-        : "Receiver mode is reserved for the destination workflow. Direct PC-to-PC receive is not enabled in this qualification build.";
-    public bool ReceiverAvailable => false;
+        : "Prepare a receiver inbox on an existing approved Windows share hosted by this PC.";
+    public bool ReceiverAvailable => Receiver.IsAvailable;
 
     public bool IsAnalyzing
     {
@@ -165,6 +171,7 @@ public sealed class MainWindowViewModel : ViewModelBase
             {
                 OnPropertyChanged(nameof(RoleTitle));
                 OnPropertyChanged(nameof(RoleDetail));
+                NotifyWizardState();
             }
         }
     }
@@ -177,6 +184,7 @@ public sealed class MainWindowViewModel : ViewModelBase
             if (Operations.CanEditSelection && !IsAnalyzing && Set(ref selectedProfile, value))
             {
                 OnPropertyChanged(nameof(ProfileDetail));
+                Receiver.ClearSenderCheck();
                 if (value is null) Operations.Reset(); else ConfigureOperations();
                 NotifyWizardState();
             }
@@ -200,7 +208,7 @@ public sealed class MainWindowViewModel : ViewModelBase
 
     private async Task RefreshAsync(CancellationToken cancellationToken)
     {
-        if (!Operations.CanEditSelection) return;
+        if (!Operations.CanEditSelection || Receiver.HasInbox || Receiver.IsBusy) return;
         var previousProfileId = SelectedProfile?.Id;
         selectedProfile = null;
         Operations.Reset();
@@ -282,6 +290,7 @@ public sealed class MainWindowViewModel : ViewModelBase
             foreach (var profile in capabilities.UserProfiles.Where(profile => profile.IsSelectable))
                 Profiles.Add(profile);
 
+            Receiver.Configure(policy, Profiles.ToArray(), capabilities.ApprovedShares.Where(s => s.State == CapabilityState.Available).Select(s => s.Path).ToArray());
             Recommendation = plan.Recommendation;
             RecommendationDetail = string.Join("  ", plan.Reasons.Select(reason => reason.Explanation));
 
@@ -342,6 +351,7 @@ public sealed class MainWindowViewModel : ViewModelBase
             nameof(CurrentPage),
             nameof(IsWelcomePage),
             nameof(IsSetupPage),
+            nameof(IsReceiverPage),
             nameof(IsDataPage),
             nameof(IsReviewPage),
             nameof(IsTransferPage),

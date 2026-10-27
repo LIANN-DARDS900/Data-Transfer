@@ -32,3 +32,7 @@ RoboTransfer does not change firewall, Defender, Group Policy, execution policy,
 ## Residual risk
 
 WMI and registry metadata can be missing, stale, or access-denied; the product reports uncertainty rather than inferring attachment or profile authority. `Directory.Exists` on an approved UNC can be delayed by the OS provider and cannot guarantee future write access. Physical Windows testing and time-bounded access validation are release gates.
+
+## Approved-share receiver inbox
+
+Receiver handoff uses only policy-authorized UNC storage (ADR-006); it adds no network listener, discovery, security-setting change or credential prompt. Confirmed metadata is fingerprinted; claims bind an inbox to one migration/source machine. Metadata parsing is bounded/strict and control files use atomic replacement with reparse rejection. The inbox identifier is not a secret. Share permissions and trusted administrators protect metadata and payload integrity; receiver monitoring is sender-reported evidence and does not independently verify source content. Physical SMB/EDR/RJ45 qualification remains mandatory.

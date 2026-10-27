@@ -54,16 +54,55 @@
                 <TextBlock Text="Send my files  →" Foreground="{StaticResource AccentBrush}" FontWeight="SemiBold" Margin="0,8,0,0"/>
               </StackPanel>
             </Button>
-            <Border Grid.Column="2" Classes="card" Background="#F0F3F7" Padding="28">
+            <Button Grid.Column="2" Classes="choice" Command="{Binding SelectReceiverCommand}" IsEnabled="{Binding ReceiverAvailable}" AutomationProperties.AutomationId="ChooseNewPc">
               <StackPanel Spacing="12">
                 <Border Width="52" Height="52" CornerRadius="26" Background="#E3E9F0" HorizontalAlignment="Left"><TextBlock Text="↓" FontSize="28" Foreground="{StaticResource MutedBrush}" HorizontalAlignment="Center" VerticalAlignment="Center"/></Border>
                 <TextBlock Text="This is my new PC" FontSize="23" FontWeight="SemiBold"/>
-                <TextBlock Classes="subtitle" Text="Direct PC-to-PC receiving is not available in this build."/>
-                <TextBlock Text="Coming later" Classes="caption" Margin="0,8,0,0"/>
+                <TextBlock Classes="subtitle" Text="Prepare a receiving folder and check the transfer from your old PC over an approved network share."/>
+                <TextBlock Text="Receive my files  →" Foreground="{StaticResource AccentBrush}" FontWeight="SemiBold" Margin="0,8,0,0"/>
               </StackPanel>
-            </Border>
+            </Button>
           </Grid>
           <TextBlock Classes="caption" Text="Your source files stay on the old PC. Copied files are verified separately." TextAlignment="Center" TextWrapping="Wrap"/>
+        </StackPanel>
+
+
+        <StackPanel IsVisible="{Binding IsReceiverPage}" Spacing="18">
+          <StackPanel Spacing="7"><TextBlock Classes="h1" Text="Welcome to your new PC"/><TextBlock Classes="subtitle" Text="Prepare a migration inbox. Files arrive here over an existing approved Windows share."/></StackPanel>
+          <Border Classes="card" IsVisible="{Binding !Receiver.HasInbox}">
+            <StackPanel Spacing="14">
+              <Grid ColumnDefinitions="*,Auto" ColumnSpacing="20"><StackPanel Spacing="5"><TextBlock Classes="h2" Text="Check this PC"/><TextBlock Classes="caption" Text="{Binding PolicySummary}"/></StackPanel><Button Grid.Column="1" Classes="primary" Content="{Binding AnalysisButtonText}" Command="{Binding RefreshCommand}" IsEnabled="{Binding !IsAnalyzing}"/></Grid>
+              <ProgressBar IsVisible="{Binding IsAnalyzing}" IsIndeterminate="True" Height="6"/>
+              <TextBlock Text="{Binding ErrorMessage}" IsVisible="{Binding HasError}" TextWrapping="Wrap" Foreground="{StaticResource WarningBrush}"/>
+              <StackPanel Spacing="12" IsVisible="{Binding HasAnalysis}" IsEnabled="{Binding Receiver.CanEditReceiver}">
+                <TextBlock Text="Who is receiving these files?" FontWeight="SemiBold"/>
+                <ComboBox ItemsSource="{Binding Receiver.Profiles}" SelectedItem="{Binding Receiver.SelectedProfile}" PlaceholderText="Choose the employee on this PC" HorizontalAlignment="Stretch"><ComboBox.ItemTemplate><DataTemplate x:DataType="core:UserProfile"><TextBlock Text="{Binding DisplayName}"/></DataTemplate></ComboBox.ItemTemplate></ComboBox>
+                <TextBlock Text="Where should files arrive?" FontWeight="SemiBold"/>
+                <ComboBox ItemsSource="{Binding Receiver.Shares}" SelectedItem="{Binding Receiver.SelectedShare}" PlaceholderText="Choose an approved share hosted by this PC" HorizontalAlignment="Stretch"/>
+                <TextBlock Classes="caption" Text="Files arrive in a separate migration folder for this employee. Existing files are preserved." TextWrapping="Wrap"/>
+              </StackPanel>
+              <Button Classes="primary" Content="Prepare my receiving folder" Command="{Binding Receiver.PrepareCommand}" IsEnabled="{Binding Receiver.CanPrepare}" HorizontalAlignment="Right"/>
+            </StackPanel>
+          </Border>
+          <Border Classes="card" IsVisible="{Binding Receiver.HasInbox}">
+            <StackPanel Spacing="14">
+              <TextBlock Classes="h2" Text="Your receiving folder is ready"/>
+              <TextBlock Text="{Binding Receiver.ReceiverName}" Classes="subtitle"/>
+              <TextBlock Text="On the old PC, enter this inbox path:" FontWeight="SemiBold"/>
+              <TextBox Text="{Binding Receiver.InboxPath, Mode=OneWay}" IsReadOnly="True" TextWrapping="Wrap"/>
+              <StackPanel Orientation="Horizontal" Spacing="16"><TextBlock Text="INBOX CODE" Classes="caption" VerticalAlignment="Center"/><TextBlock Text="{Binding Receiver.InboxCode}" FontSize="28" FontWeight="SemiBold" Foreground="{StaticResource AccentBrush}"/></StackPanel>
+              <TextBlock Text="Compare this code on both screens before sending. It identifies this inbox; Windows permissions control access." Classes="caption" TextWrapping="Wrap"/>
+              <TextBlock Text="{Binding Receiver.SenderStatusText}" TextWrapping="Wrap" FontSize="20" FontWeight="SemiBold"/>
+              <TextBlock Text="{Binding Receiver.SenderProgress}" Classes="subtitle"/>
+              <TextBlock Text="{Binding Receiver.LastSeen}" Classes="caption"/>
+              <TextBlock Text="{Binding Receiver.DestinationText}" Classes="caption" TextWrapping="Wrap"/>
+              <TextBlock Text="The sender’s final report is saved here after verification:" Classes="caption"/>
+              <TextBox Text="{Binding Receiver.ReceiverReportPath, Mode=OneWay}" IsReadOnly="True" TextWrapping="Wrap"/>
+              <StackPanel Orientation="Horizontal" Spacing="10"><Button Classes="secondary" Content="Refresh status" Command="{Binding Receiver.RefreshCommand}" IsEnabled="{Binding !Receiver.IsBusy}"/><Button Classes="secondary" Content="Close unused inbox" Command="{Binding Receiver.CloseCommand}" IsEnabled="{Binding Receiver.CanClose}"/><Button Classes="secondary" Content="Monitor another migration" Command="{Binding Receiver.DoneCommand}" IsEnabled="{Binding Receiver.CanFinishWatching}"/></StackPanel>
+            </StackPanel>
+          </Border>
+          <Border Classes="soft"><TextBlock Text="{Binding Receiver.Status}" TextWrapping="Wrap"/></Border>
+          <Expander Header="Reopen an existing receiver inbox" IsVisible="{Binding !Receiver.HasInbox}" HorizontalAlignment="Stretch"><StackPanel Spacing="10" Margin="0,12,0,0"><TextBox Text="{Binding Receiver.InboxInput}" IsEnabled="{Binding !Receiver.IsBusy}" PlaceholderText="Paste the inbox path previously prepared on this PC"/><Button Classes="secondary" Content="Reopen inbox" Command="{Binding Receiver.ReopenCommand}" IsEnabled="{Binding !Receiver.IsBusy}" HorizontalAlignment="Left"/></StackPanel></Expander>
         </StackPanel>
 
         <StackPanel IsVisible="{Binding IsSetupPage}" Spacing="18">
@@ -83,6 +122,23 @@
                 <ComboBox.ItemTemplate><DataTemplate x:DataType="core:UserProfile"><TextBlock Text="{Binding DisplayName}"/></DataTemplate></ComboBox.ItemTemplate>
               </ComboBox>
               <TextBlock Classes="caption" Text="{Binding ProfileDetail}"/>
+
+              <Expander Header="Send to a prepared new PC (RJ45 / network)" HorizontalAlignment="Stretch">
+                <StackPanel Spacing="12" Margin="0,12,0,0">
+                  <TextBlock Classes="subtitle" Text="On the new PC, choose Receive and prepare an inbox first. Paste its path here."/>
+                  <TextBox Text="{Binding Receiver.InboxInput}" IsEnabled="{Binding !Receiver.IsBusy}" PlaceholderText="\\NEW-PC\ApprovedShare\RoboTransferInbox\…"/>
+                  <Button Classes="secondary" Content="Check the receiving PC" Command="{Binding Receiver.CheckCommand}" IsEnabled="{Binding !Receiver.IsBusy}" HorizontalAlignment="Left"/>
+                  <StackPanel Spacing="10" IsVisible="{Binding Receiver.HasCheckedReceiver}">
+                    <TextBlock Text="{Binding Receiver.RecipientText}" FontSize="18" FontWeight="SemiBold"/>
+                    <TextBox Text="{Binding Receiver.ComparisonCode}" IsEnabled="{Binding !Receiver.IsBusy}" PlaceholderText="Enter the 8-character code shown on the new PC" MaxLength="8"/>
+                    <CheckBox Content="I checked the PC name, employee and inbox code." IsChecked="{Binding Receiver.RecipientConfirmed}" IsEnabled="{Binding !Receiver.IsBusy}"/>
+                    <Button Classes="primary" Content="Use this receiving PC" Command="{Binding Receiver.UseReceiverCommand}" IsEnabled="{Binding Receiver.CanUseReceiver}" HorizontalAlignment="Left"/>
+                  </StackPanel>
+                  <TextBlock Text="{Binding Receiver.Status}" Classes="subtitle"/>
+                </StackPanel>
+              </Expander>
+              <TextBlock Text="{Binding Operations.RecipientSummary}" IsVisible="{Binding Operations.HasReceiver}" Foreground="{StaticResource AccentBrush}" FontWeight="SemiBold"/>
+
               <TextBlock Classes="h2" Text="How do you want to move them?" Margin="0,8,0,0"/>
               <ListBox Classes="wizardOptions" ItemsSource="{Binding Operations.Destinations}" SelectedItem="{Binding Operations.SelectedDestination}">
                 <ListBox.ItemTemplate>

@@ -13,6 +13,13 @@ public sealed partial class MainWindow : Window
     public MainWindow()
     {
         InitializeComponent();
+        var receiverTimer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(2) };
+        receiverTimer.Tick += async (_, _) =>
+        {
+            if (observed?.IsReceiverPage == true && observed.Receiver.HasInbox)
+                await observed.Receiver.RefreshStatusAsync();
+        };
+        receiverTimer.Start();
         DataContextChanged += (_, _) =>
         {
             if (observed is not null) observed.PropertyChanged -= OnWizardChanged;
@@ -20,7 +27,7 @@ public sealed partial class MainWindow : Window
             lastPage = observed?.CurrentPage ?? -1;
             if (observed is not null) observed.PropertyChanged += OnWizardChanged;
         };
-        Closed += (_, _) => { if (observed is not null) observed.PropertyChanged -= OnWizardChanged; };
+        Closed += (_, _) => { receiverTimer.Stop(); if (observed is not null) observed.PropertyChanged -= OnWizardChanged; };
     }
 
     private void OnWizardChanged(object? sender, PropertyChangedEventArgs args)
