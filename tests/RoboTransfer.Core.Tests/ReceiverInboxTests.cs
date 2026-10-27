@@ -237,6 +237,17 @@ public sealed class ReceiverInboxTests : IDisposable
         await Run(vm.StartScanCommand); vm.ReviewConfirmed = true;
         await Run(vm.LockPlanCommand);
         Assert.True(vm.HasLockedPlan);
+        var savedPlanPath = Directory.GetFiles(Path.Combine(root, "plans"), "*.plan.json").Single();
+        var savedPlan = JsonSerializer.Deserialize<MigrationExecutionPlan>(await File.ReadAllTextAsync(savedPlanPath, Token))!;
+        Assert.Equal(ReceiverInboxService.Bind(offer), savedPlan.Receiver);
+        var beforeWrongProfile = sourceEnvironment.AccessCount;
+        var wrongProfile = selected with { Id = "different-employee" };
+        await Assert.ThrowsAsync<InvalidOperationException>(() => coordinator.TransferAsync(savedPlan, wrongProfile, policy, null, new Progress<TransferProgress>(), Token));
+        Assert.Equal(beforeWrongProfile, sourceEnvironment.AccessCount);
+        var savedSession = await journal.LoadAsync(savedPlan.SessionId, Token);
+        var wrongResume = await coordinator.ValidateResumeAsync(savedSession!, wrongProfile, policy, null, new("Robocopy", CapabilityState.Available), Token);
+        Assert.False(wrongResume.Validation.IsValid);
+        Assert.Equal(beforeWrongProfile, sourceEnvironment.AccessCount);
         await Run(vm.StartTransferCommand);
         Assert.True(vm.HasCompletedTransfer, vm.Status);
         Assert.Equal("Employee work", await File.ReadAllTextAsync(Path.Combine(Access(offer), "Files", "Documents", "work.txt"), Token));

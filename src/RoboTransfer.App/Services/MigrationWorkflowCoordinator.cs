@@ -5,6 +5,11 @@ namespace RoboTransfer.App.Services;
 
 public sealed class MigrationWorkflowCoordinator(IManifestScanner scanner, IManifestReader manifestReader, IMigrationJournal journal, IMigrationRecovery recovery, IExecutionPlanStore plans, IDestinationValidator destinations, ITransferReconciler reconciler, KeepBothTransferEngineFactory keepBothFactory, IVerificationEngine verification, IVerificationStore verificationStore, IOperationalRecordStore operationalRecords, IReportGenerator reports, string dataRoot, ReceiverInboxService? receiverInboxes = null)
 {
+    private static void RequireSourceIdentity(MigrationExecutionPlan plan, UserProfile profile)
+    {
+        if (!profile.IsSelectable || profile.Id != plan.SourceProfileIdentity || !string.Equals(Environment.MachineName, plan.SourceMachineIdentity, StringComparison.OrdinalIgnoreCase))
+            throw new InvalidOperationException("The source PC or employee differs from the locked plan. Analyze the original source and revalidate the session.");
+    }
     private static void RequireReceiverDestination(MigrationExecutionPlan plan)
     {
         if (plan.Receiver is not null && (plan.Route != MigrationRoute.ConfiguredNetworkShare ||
@@ -47,6 +52,7 @@ public sealed class MigrationWorkflowCoordinator(IManifestScanner scanner, IMani
 
     public async Task<TransferReconciliationResult> TransferAsync(MigrationExecutionPlan plan, UserProfile profile, PolicyProfile policy, StorageVolume? volume, IProgress<TransferProgress> progress, CancellationToken cancellationToken)
     {
+        RequireSourceIdentity(plan, profile);
         var transferStarted = System.Diagnostics.Stopwatch.StartNew();
         if (plan.Receiver is not null)
         {
@@ -88,7 +94,10 @@ public sealed class MigrationWorkflowCoordinator(IManifestScanner scanner, IMani
 
     public IAsyncEnumerable<MigrationSession> DiscoverAsync(CancellationToken cancellationToken = default) => recovery.DiscoverAsync(cancellationToken);
     public Task AbandonAsync(MigrationSession session, CancellationToken cancellationToken = default) => recovery.AbandonAsync(session, cancellationToken);
-    public async Task<(MigrationExecutionPlan? Plan, DestinationValidationResult Validation)> ValidateResumeAsync(MigrationSession session, UserProfile profile, PolicyProfile policy, StorageVolume? volume, ToolCapability robocopy, CancellationToken cancellationToken) { var plan = await plans.LoadAsync(session.Id, cancellationToken); if (plan?.Receiver is not null)
+    public async Task<(MigrationExecutionPlan? Plan, DestinationValidationResult Validation)> ValidateResumeAsync(MigrationSession session, UserProfile profile, PolicyProfile policy, StorageVolume? volume, ToolCapability robocopy, CancellationToken cancellationToken) { var plan = await plans.LoadAsync(session.Id, cancellationToken);
+        if (plan is not null && (!profile.IsSelectable || profile.Id != plan.SourceProfileIdentity || !string.Equals(Environment.MachineName, plan.SourceMachineIdentity, StringComparison.OrdinalIgnoreCase)))
+            return (plan, new(false, [new(ErrorCategory.ConfigurationInvalid, "The selected source PC or employee differs from this migration. Select the original profile and revalidate.")]));
+        if (plan?.Receiver is not null)
         {
             if (receiverInboxes is null) throw new InvalidOperationException("Receiver transport is unavailable.");
             RequireReceiverDestination(plan);
@@ -98,6 +107,7 @@ public sealed class MigrationWorkflowCoordinator(IManifestScanner scanner, IMani
         if (plan is null) return (null, new(false, [new(ErrorCategory.ConfigurationInvalid, "Execution plan is missing. Resume is blocked.")])); var sources = profile.KnownFolders.Where(f => plan.SelectedKnownFolders.Contains(f.Kind)).Select(f => f.Path!).ToArray(); var context = new DestinationValidationContext(plan, sources, policy, volume, true, robocopy); return (plan, await recovery.ValidateResumeAsync(session, plan, context, cancellationToken)); }
     public async Task<VerificationResult> VerifyAsync(MigrationExecutionPlan plan, UserProfile profile, PolicyProfile policy, IReadOnlySet<string>? retry, IProgress<VerificationProgress> progress, CancellationToken cancellationToken)
     {
+        RequireSourceIdentity(plan, profile);
         if (plan.Receiver is not null)
         {
             if (receiverInboxes is null) throw new InvalidOperationException("Receiver transport is unavailable.");
