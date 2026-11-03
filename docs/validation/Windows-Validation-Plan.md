@@ -9,7 +9,7 @@ Exercise standard and strong verification on zero-byte, large, locked, changed, 
 ## Baseline procedure
 
 1. Publish a Release `win-x64` build from a clean checkout and verify its hash.
-2. Place a version-1 policy in `%LOCALAPPDATA%\RoboTransfer\policy.json`; record its SHA-256.
+2. Place a version-1 policy in `%LOCALAPPDATA%\RoboTransfer\Policies\policy.json`; record its SHA-256.
 3. Start as a standard user, select **Refresh analysis**, and capture environment, source, and recommendation states.
 4. Compare logical volumes with Disk Management, `Get-Disk`, `Get-PhysicalDisk`, and `Get-Volume` evidence. Do not change device configuration.
 5. Compare selectable profiles with `HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion\ProfileList`; verify Public, Default, service, temporary, and stale profiles are absent.

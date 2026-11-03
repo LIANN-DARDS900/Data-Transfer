@@ -1,0 +1,155 @@
+{
+  "WorkflowRun": 41628398716,
+  "Job": 125891467100,
+  "SourceCommit": "8b56892728cd562df4987f78f8f5e8da365d47f2",
+  "Note": "Second record is SMB loopback on the SAME runner, not two hosts.",
+  "NegotiatedLoopback": {
+    "Dialect": "3.1.1",
+    "Signed": false,
+    "Encrypted": true
+  },
+  "Runs": [
+    {
+      "SchemaVersion": 1,
+      "RunId": "62c16988-9c44-4736-9f29-da8fda366db4",
+      "Utc": "2026-11-03T11:34:43.7388949+00:00",
+      "Machine": "runnervmhao91",
+      "Environment": "ONE Windows runner, local filesystem",
+      "ApplicationVersion": "0.4.0-rc.1+local.local",
+      "SourceMiB": 64,
+      "CopiedBytes": 67211902,
+      "CopySeconds": 0.6288561,
+      "EffectiveMiBPerSecond": 101.92835005371478,
+      "RateScope": "Logical bytes copied / first default-engine copy elapsed; excludes scan and SHA-256; not wire throughput",
+      "PhysicalDellSpeed": "NOT MEASURED unless this run was performed on the physical Dell pair",
+      "Findings": [
+        {
+          "Name": "Default engine copy and reconciliation",
+          "Status": "PASS",
+          "Detail": "115 files; 67211902 logical bytes; 0.629s; TransferCompletedVerificationPending"
+        },
+        {
+          "Name": "SHA-256 completion",
+          "Status": "PASS",
+          "Detail": "115/115 files verified; Completed; verification is separate from copying."
+        },
+        {
+          "Name": "OST exclusion",
+          "Status": "PASS",
+          "Detail": "Scan exclusions: 1. OST exclusion is an application rule, not evidence of endpoint security blocking an extension."
+        },
+        {
+          "Name": "Same-size corruption detected",
+          "Status": "PASS",
+          "Detail": "Mismatch count=1"
+        },
+        {
+          "Name": "Injected cancellation and owned partial cleanup",
+          "Status": "PASS",
+          "Detail": "Deterministic injected cancellation; no cable or firewall fault was injected."
+        },
+        {
+          "Name": "Retry after cancellation",
+          "Status": "PASS",
+          "Detail": "Retransfers complete files; does not prove byte-offset resume or recovery after unplugging Ethernet."
+        },
+        {
+          "Name": "Idempotent resume requirement",
+          "Status": "FAIL",
+          "Detail": "Characterization: rerunning KeepBoth produced 115 additional copies. Resume currently restarts work and is not idempotent. Copy result=True."
+        },
+        {
+          "Name": "Receipt-accurate collision verification",
+          "Status": "FAIL",
+          "Detail": "Characterization: latest renamed copy was deliberately corrupted while the original remained correct. Verifier currently selects an older metadata match; durable destination receipts are required."
+        },
+        {
+          "Name": "Locked PST classification",
+          "Status": "PASS",
+          "Detail": "Exclusive OS file lock on an inert PST fixture, not an Outlook integration test."
+        },
+        {
+          "Name": "Actual system Robocopy adapter",
+          "Status": "PASS",
+          "Detail": "Independent adapter smoke test; /Z configured. Default UI uses KeepBoth, not this adapter."
+        },
+        {
+          "Name": "TCP 445 restriction, bad credentials and cable loss",
+          "Status": "NOT RUN",
+          "Detail": "Requires two authorized Windows endpoints and a controlled lab. No host policy or credentials were modified."
+        }
+      ]
+    },
+    {
+      "SchemaVersion": 1,
+      "RunId": "953816fb-5907-491d-884a-8110e3de2a6d",
+      "Utc": "2026-11-03T11:34:59.8922354+00:00",
+      "Machine": "runnervmhao91",
+      "Environment": "Explicit approved UNC; physical topology must be confirmed separately",
+      "ApplicationVersion": "0.4.0-rc.1+local.local",
+      "SourceMiB": 16,
+      "CopiedBytes": 16880254,
+      "CopySeconds": 2.2968017,
+      "EffectiveMiBPerSecond": 7.008991979679337,
+      "RateScope": "Logical bytes copied / first default-engine copy elapsed; excludes scan and SHA-256; not wire throughput",
+      "PhysicalDellSpeed": "NOT MEASURED unless this run was performed on the physical Dell pair",
+      "Findings": [
+        {
+          "Name": "Default engine copy and reconciliation",
+          "Status": "PASS",
+          "Detail": "115 files; 16880254 logical bytes; 2.297s; TransferCompletedVerificationPending"
+        },
+        {
+          "Name": "SHA-256 completion",
+          "Status": "PASS",
+          "Detail": "115/115 files verified; Completed; verification is separate from copying."
+        },
+        {
+          "Name": "OST exclusion",
+          "Status": "PASS",
+          "Detail": "Scan exclusions: 1. OST exclusion is an application rule, not evidence of endpoint security blocking an extension."
+        },
+        {
+          "Name": "Same-size corruption detected",
+          "Status": "PASS",
+          "Detail": "Mismatch count=1"
+        },
+        {
+          "Name": "Injected cancellation and owned partial cleanup",
+          "Status": "PASS",
+          "Detail": "Deterministic injected cancellation; no cable or firewall fault was injected."
+        },
+        {
+          "Name": "Retry after cancellation",
+          "Status": "PASS",
+          "Detail": "Retransfers complete files; does not prove byte-offset resume or recovery after unplugging Ethernet."
+        },
+        {
+          "Name": "Idempotent resume requirement",
+          "Status": "FAIL",
+          "Detail": "Characterization: rerunning KeepBoth produced 115 additional copies. Resume currently restarts work and is not idempotent. Copy result=True."
+        },
+        {
+          "Name": "Receipt-accurate collision verification",
+          "Status": "FAIL",
+          "Detail": "Characterization: latest renamed copy was deliberately corrupted while the original remained correct. Verifier currently selects an older metadata match; durable destination receipts are required."
+        },
+        {
+          "Name": "Locked PST classification",
+          "Status": "PASS",
+          "Detail": "Exclusive OS file lock on an inert PST fixture, not an Outlook integration test."
+        },
+        {
+          "Name": "Actual system Robocopy adapter",
+          "Status": "PASS",
+          "Detail": "Independent adapter smoke test; /Z configured. Default UI uses KeepBoth, not this adapter."
+        },
+        {
+          "Name": "TCP 445 restriction, bad credentials and cable loss",
+          "Status": "NOT RUN",
+          "Detail": "Requires two authorized Windows endpoints and a controlled lab. No host policy or credentials were modified."
+        }
+      ]
+    }
+  ]
+}

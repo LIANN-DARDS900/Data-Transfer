@@ -1,0 +1,96 @@
+name: Network validation
+on:
+  pull_request:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  windows:
+    # Standard public-repository runner only. No larger runners, cloud accounts or tunnels.
+    if: github.event.repository.private == false
+    runs-on: windows-2025
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: 10.0.x
+      - name: Build and test the actual solution
+        shell: pwsh
+        run: |
+          dotnet test RoboTransfer.sln -c Release --logger "trx;LogFileName=results.trx"
+          if ($LASTEXITCODE) { exit $LASTEXITCODE }
+      - name: Parse read-only collector with Windows PowerShell 5.1
+        shell: powershell
+        run: |
+          $tokens = $null; $errors = $null
+          Get-ChildItem tools/NetworkValidation/*.ps1 | ForEach-Object {
+            [System.Management.Automation.Language.Parser]::ParseFile($_.FullName, [ref]$tokens, [ref]$errors) | Out-Null
+            if ($errors.Count) { $errors | Format-List; throw 'PowerShell syntax errors' }
+          }
+      - name: Collect runner diagnostics locally (no peer, no upload)
+        shell: powershell
+        run: ./tools/NetworkValidation/Get-NetworkDiagnostics.ps1 -OutputDirectory "$env:RUNNER_TEMP/rt-private-diagnostics"
+      - name: Exercise actual engines on ONE Windows runner
+        shell: pwsh
+        run: |
+          dotnet run --project tools/NetworkValidation/RoboTransfer.NetworkValidation.csproj -c Release -- --ci-local --size-mib 64 --output "$env:RUNNER_TEMP/rt-local-evidence"
+          if ($LASTEXITCODE) { exit $LASTEXITCODE }
+      - name: Exercise authenticated loopback SMB if already available
+        shell: pwsh
+        run: |
+          # Creates an ephemeral share on this disposable runner only. No account,
+          # firewall, service, adapter, signing or encryption policy modifications.
+          $share = 'RTQual' + [guid]::NewGuid().ToString('N').Substring(0,10)
+          $folder = Join-Path $env:RUNNER_TEMP $share
+          New-Item -ItemType Directory $folder | Out-Null
+          $created = $false; $connected = $false
+          try {
+            New-SmbShare -Name $share -Path $folder -FullAccess ([System.Security.Principal.WindowsIdentity]::GetCurrent().Name) -EncryptData $true -ErrorAction Stop | Out-Null
+            $created = $true
+            $unc = "\\localhost\$share"
+            if (!(Test-Path -LiteralPath $unc)) { throw 'Loopback SMB unavailable under existing runner policy' }
+            $connected = $true
+            $policy = @{schemaVersion=1;allowConfiguredNetworkShare=$true;allowExternalStorage=$false;allowUsmt=$false;allowRobocopy=$true;requiredVerification='strong';defaultConflictPolicy='keepBoth';approvedNetworkSharePaths=@($unc)}
+            $policyFile = Join-Path $env:RUNNER_TEMP 'rt-lab-policy.json'
+            $policy | ConvertTo-Json | Set-Content $policyFile
+            dotnet run --project tools/NetworkValidation/RoboTransfer.NetworkValidation.csproj -c Release -- --destination $unc --policy $policyFile --size-mib 16 --output "$env:RUNNER_TEMP/rt-smb-evidence"
+            if ($LASTEXITCODE) { throw 'SMB harness failed; inspect run logs' }
+            Get-SmbConnection | Where-Object ShareName -eq $share | Select-Object Dialect,Signed,Encrypted | Format-Table
+          } catch {
+            if ($connected) { throw }
+            "BLOCKED: loopback SMB qualification: $($_.Exception.GetType().Name): $($_.Exception.Message)" | Tee-Object -FilePath "$env:RUNNER_TEMP/rt-smb-blocked.txt"
+          } finally {
+            if ($created) { Remove-SmbShare -Name $share -Force }
+          }
+      - name: Publish test-ready Windows payload locally
+        shell: pwsh
+        run: |
+          dotnet publish src/RoboTransfer.App/RoboTransfer.App.csproj -c Release -r win-x64 --self-contained false -o "$env:RUNNER_TEMP/rt-build" -p:SourceRevisionId=${{ github.sha }}
+          if ($LASTEXITCODE) { exit $LASTEXITCODE }
+          dotnet publish tools/NetworkValidation/RoboTransfer.NetworkValidation.csproj -c Release -r win-x64 --self-contained false -o "$env:RUNNER_TEMP/rt-build/NetworkValidation" -p:SourceRevisionId=${{ github.sha }}
+          if ($LASTEXITCODE) { exit $LASTEXITCODE }
+          Get-ChildItem "$env:RUNNER_TEMP/rt-build" -File -Recurse | Get-FileHash -Algorithm SHA256 | Format-Table -AutoSize
+      - name: Record evidence in logs and job summary
+        if: always()
+        shell: pwsh
+        run: |
+          "## RoboTransfer validation scope`nOne disposable Windows runner; local and optional loopback SMB. Two-machine/RJ45, TCP-445 deny rules, OCP policies and physical speed NOT VALIDATED." >> $env:GITHUB_STEP_SUMMARY
+          foreach ($path in @('rt-local-evidence','rt-smb-evidence')) {
+            $file = Join-Path $env:RUNNER_TEMP "$path/qualification.json"
+            if (Test-Path $file) {
+              Get-Content $file
+              $verificationFile = Join-Path $env:RUNNER_TEMP "$path/per-file-verification.json"
+              if (Test-Path $verificationFile) {
+                "BEGIN_PER_FILE: $path"
+                Get-Content $verificationFile
+                "END_PER_FILE: $path"
+              }
+              "### $path" >> $env:GITHUB_STEP_SUMMARY
+              '```json' >> $env:GITHUB_STEP_SUMMARY
+              Get-Content $file >> $env:GITHUB_STEP_SUMMARY
+              '```' >> $env:GITHUB_STEP_SUMMARY
+            }
+          }
+          # No artifact/cache uploads: account-wide storage allowance is unverified.
+          # Build payload is also reproducible with tools/NetworkValidation/Build-TestKit.ps1.
