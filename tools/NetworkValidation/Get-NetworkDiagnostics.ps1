@@ -70,9 +70,11 @@ if ($Peer) {
         $clock = [Diagnostics.Stopwatch]::StartNew()
         try {
             $task = $client.ConnectAsync($Peer,445)
-            if (-not $task.Wait($TimeoutSeconds*1000)) { $state = 'TIMEOUT' }
-            elseif ($client.Connected) { $state = 'CONNECTED' }
-            else { $state = 'FAILED' }
+            try {
+                if (-not $task.Wait($TimeoutSeconds*1000)) { $state = 'TIMEOUT' }
+                elseif ($client.Connected) { $state = 'CONNECTED' }
+                else { $state = 'FAILED' }
+            } catch { $state = 'FAILED: ' + $_.Exception.GetBaseException().Message }
             [pscustomobject]@{ Host=$Peer; Port=445; Result=$state; ElapsedMs=$clock.ElapsedMilliseconds; Interpretation='Connectivity evidence only. Does not establish SMB authentication, share access or the cause of blocking.' }
         } finally { $client.Dispose() }
     }

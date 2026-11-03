@@ -46,6 +46,7 @@ flowchart TD
 | KeepBoth resume creates further collision copies | Open limitation. Resume revalidates identity, policy, tool and destination, then repeats the manifest. No persistent completed-file receipt or byte-offset continuation exists in this engine. Controlled cancellation removes its owned partial candidate when possible; network disconnection can prevent cleanup. |
 | KeepBoth verifier infers the destination candidate from size/time | Open qualification risk: matching metadata on an older collision may select the wrong file. A durable per-session source-to-destination receipt is needed. The report can also show the original relative destination instead of the renamed candidate. Treat collision-heavy migrations as unqualified. |
 | Exclusion count is named SkippedCloudContent in report JSON | Existing schema aggregates scan exclusions. HTML now labels it Excluded items (all scan reasons). Do not infer all exclusions were cloud files. Per-path reasons for every scan exclusion remain incomplete. |
+| README and older validation plan used the wrong policy directory | Fixed to `%LOCALAPPDATA%\RoboTransfer\Policies\policy.json`, matching actual app registration. Putting policy at the former root path leaves the app conservatively blocked. |
 | System executable trust, safe paths, no destructive Robocopy switches | Existing controls retained. This work changes no security settings. |
 
 This is a test-ready alpha. Duplicate resume and collision mapping are qualification blockers, not claims of a finished production migration engine.
@@ -145,3 +146,6 @@ If a native protocol is authorized, use standard TLS via `SslStream`, verified p
 - [GitHub standard hosted runner scope and public compute](https://docs.github.com/en/actions/reference/runners/github-hosted-runners)
 - [GitHub Actions compute/storage billing](https://docs.github.com/en/billing/concepts/product-billing/github-actions)
 - [Microsoft Robocopy: restartable mode, options and exit codes](https://learn.microsoft.com/en-us/windows-server/administration/windows-commands/robocopy)
+
+- [Microsoft .NET SslStream authentication](https://learn.microsoft.com/en-us/dotnet/api/system.net.security.sslstream?view=net-10.0)
+- [Microsoft SMB security and encryption](https://learn.microsoft.com/en-us/windows-server/storage/file-server/smb-security)

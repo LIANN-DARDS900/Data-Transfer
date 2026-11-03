@@ -135,7 +135,7 @@ These are **qualification artifacts**, not approved enterprise production packag
 
 ## Local policy
 
-Copy [`config/policy.example.json`](config/policy.example.json) to `%LOCALAPPDATA%\RoboTransfer\policy.json`, then have the enterprise policy owner explicitly enable only approved mechanisms. The shipped example and application default deny all routes and tools. Unsupported versions, invalid JSON, unsafe conflict defaults, and invalid UNC entries remain conservative and are surfaced in the UI; they never fall back permissively.
+Copy [`config/policy.example.json`](config/policy.example.json) to `%LOCALAPPDATA%\RoboTransfer\Policies\policy.json`, then have the enterprise policy owner explicitly enable only approved mechanisms. The shipped example and application default deny all routes and tools. Unsupported versions, invalid JSON, unsafe conflict defaults, and invalid UNC entries remain conservative and are surfaced in the UI; they never fall back permissively.
 
 ## Still pending
 

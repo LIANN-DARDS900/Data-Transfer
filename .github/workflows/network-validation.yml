@@ -80,6 +80,12 @@ jobs:
             $file = Join-Path $env:RUNNER_TEMP "$path/qualification.json"
             if (Test-Path $file) {
               Get-Content $file
+              $verificationFile = Join-Path $env:RUNNER_TEMP "$path/per-file-verification.json"
+              if (Test-Path $verificationFile) {
+                "BEGIN_PER_FILE: $path"
+                Get-Content $verificationFile
+                "END_PER_FILE: $path"
+              }
               "### $path" >> $env:GITHUB_STEP_SUMMARY
               '```json' >> $env:GITHUB_STEP_SUMMARY
               Get-Content $file >> $env:GITHUB_STEP_SUMMARY
