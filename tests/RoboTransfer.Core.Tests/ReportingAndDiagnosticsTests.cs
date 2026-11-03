@@ -7,6 +7,18 @@ namespace RoboTransfer.Core.Tests;
 
 public sealed class ReportingAndDiagnosticsTests
 {
+    [Fact]
+    public async Task Html_reports_measured_copy_rate_and_escapes_warnings()
+    {
+        using var temp = new Temp();
+        var report = Report(FinalMigrationStatus.SuccessWithWarnings) with { TransferredBytes = 2097152, TransferElapsed = TimeSpan.FromSeconds(2), Warnings = ["<script>unsafe</script>"] };
+        var paths = await new MigrationReportGenerator().GenerateAsync(report, temp.Path, TestContext.Current.CancellationToken);
+        var html = await File.ReadAllTextAsync(paths.HtmlPath, TestContext.Current.CancellationToken);
+        Assert.Contains("MiB/s", html); Assert.Contains("not Ethernet line speed", html);
+        Assert.Contains("&lt;script&gt;unsafe&lt;/script&gt;", html); Assert.DoesNotContain("<script>unsafe</script>", html);
+        var unknown = await new MigrationReportGenerator().GenerateAsync(report with { TransferElapsed = TimeSpan.Zero }, temp.Path, TestContext.Current.CancellationToken);
+        Assert.Contains("Not measured", await File.ReadAllTextAsync(unknown.HtmlPath, TestContext.Current.CancellationToken));
+    }
     [Theory]
     [InlineData(FinalMigrationStatus.Success)]
     [InlineData(FinalMigrationStatus.SuccessWithWarnings)]

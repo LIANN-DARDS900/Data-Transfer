@@ -17,14 +17,14 @@ public sealed class KeepBothTransferEngine(IManifestReader manifests, Func<Strea
                 if (entry.TransferState == TransferState.Skipped) { skipped++; continue; }
                 cancellationToken.ThrowIfCancellationRequested();
                 var source = Within(sourceRoot, entry.RelativePath); var desired = Within(destinationRoot, entry.RelativePath);
-                Directory.CreateDirectory(Path.GetDirectoryName(desired)!);
                 try
                 {
+                    Directory.CreateDirectory(Path.GetDirectoryName(desired)!);
                     await CopyKeepBothAsync(source, desired, entry, cancellationToken); files++; bytes += entry.FileSize;
                 }
-                catch (IOException) when (Path.GetExtension(source).Equals(".pst", StringComparison.OrdinalIgnoreCase))
+                catch (IOException ex) when ((ex.HResult & 0xffff) is 32 or 33)
                 {
-                    failed++; errors.Add(new(ErrorCategory.FileLocked, "Outlook data file is currently in use. Close Outlook and retry this item.", "PST copy returned a sharing or I/O failure."));
+                    failed++; errors.Add(new(ErrorCategory.FileLocked, "A file is locked by another process. Close the owning application and retry this item.", "Windows reported a sharing or lock violation."));
                 }
                 catch (UnauthorizedAccessException) { failed++; errors.Add(new(ErrorCategory.AccessDenied, "A file could not be copied. Verify access and retry; RoboTransfer will not bypass security policy.")); }
                 catch (IOException) { failed++; errors.Add(new(ErrorCategory.Unknown, "A file could not be copied. Inspect the item and retry.")); }
